@@ -209,6 +209,7 @@ main {
 }
 .btn-secondary { background: transparent; color: var(--fg); border-color: var(--fg); }
 .btn:focus-visible { outline-color: var(--fg); }
+.btn[aria-disabled="true"] { cursor: progress; }
 
 /* ---------- tags ---------- */
 
@@ -227,7 +228,7 @@ main {
 .tag svg { flex: none; width: 0.75em; height: 0.75em; }
 .tag-leak { background: var(--red); border-color: var(--red); color: var(--on-red); }
 .tag-ok { background: transparent; color: var(--safe); }
-.tag-unknown { background: transparent; color: var(--fg); border-style: dashed; }
+.tag-unknown { background: transparent; color: var(--muted); }
 
 /* ---------- summary ---------- */
 
@@ -261,6 +262,7 @@ main {
 .tile-num svg { flex: none; width: 1.75rem; height: 1.75rem; }
 .tile-leak { color: var(--red); }
 .tile-ok { color: var(--safe); }
+.tile-word { font-size: clamp(2rem, 9vw, 3.5rem); line-height: 0.95; }
 .tile-text { color: var(--soft); font-size: 0.9375rem; }
 
 /* ---------- sections ---------- */
@@ -291,6 +293,23 @@ main {
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem 1.5rem; }
 .row-label { flex: 0 1 13.75rem; color: var(--muted); font-size: 0.9375rem; }
 .row-value { flex: 1 1 16rem; min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
+.row-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9375rem;
+  text-align: left;
+  cursor: pointer;
+}
+.row-toggle svg { flex: none; width: 0.75em; height: 0.75em; }
+.row-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+.row-toggle:hover span { text-decoration: underline; text-underline-offset: 0.2em; }
 
 /* Explanation panel: only fg and soft text sit on panel (contrast). */
 .panel {
@@ -301,6 +320,8 @@ main {
   background: var(--panel);
   color: var(--fg);
 }
+.panel[hidden] { display: none; }
+.panel-col { display: flex; flex-direction: column; gap: 0.375rem; }
 .panel .label { color: var(--soft); font-weight: 700; }
 
 /* ---------- footer ---------- */
