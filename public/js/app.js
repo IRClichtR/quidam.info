@@ -41,6 +41,8 @@ async function runScan() {
     const num = new Intl.NumberFormat(root.lang);
     const count = (/** @type {string} */ v) => num.format(findings.filter((f) => f.verdict === v).length);
     announce(t('scan.done', { leak: count('leak'), ok: count('ok') }));
+  } catch {
+    announce(t('scan.failed'));
   } finally {
     scanning = false;
     runBtn.removeAttribute('aria-disabled');

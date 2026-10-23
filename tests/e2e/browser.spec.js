@@ -112,6 +112,21 @@ test.describe('without WebRTC', () => {
   });
 });
 
+test.describe('without crypto.subtle (plain http on a LAN address)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      delete (/** @type {any} */ (Crypto.prototype)).subtle;
+    });
+  });
+  test('the scan still finishes and announces', async ({ page }) => {
+    await scan(page);
+    await expect(page.locator('#announce')).toHaveText(/^Scan finished: \d+ leaking, \d+ protected\.$/);
+    for (const id of ['canvas', 'audio']) {
+      await expect(page.locator(`#browser li[data-finding="${id}"] .tag-unknown`)).toHaveCount(1);
+    }
+  });
+});
+
 test('French page shows the translated LEAK tag', async ({ page }) => {
   await scan(page, 'fr');
   const tags = await page.locator('#browser .tag').allTextContents();

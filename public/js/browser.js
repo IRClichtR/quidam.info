@@ -7,10 +7,11 @@
 /** @typedef {(key: string, vars?: Record<string, string|number|undefined>) => string} T */
 /**
  * `offsetMin` is minutes east of UTC (Paris in summer: 120). `localCandidates` is null when WebRTC is unavailable.
+ * `canvas` is null when readback is blocked or blank, and 'unknown' when the test itself failed.
  * @typedef {{
  *   screen: {w: number, h: number, innerW: number, innerH: number, dpr: number},
  *   timeZone: string, offsetMin: number, languages: string[], gpu: string|null, fontCount: number,
- *   canvas: [string, string], audio: [string, string]|null, cores: number|undefined, memory: number|undefined,
+ *   canvas: [string, string]|null|'unknown', audio: [string, string]|null, cores: number|undefined, memory: number|undefined,
  *   localCandidates: string[]|null, gpc: boolean|undefined
  * }} RawBrowser
  */
@@ -76,11 +77,13 @@ export function judgeBrowser(raw, t, lang = 'en') {
       verdict: verdict(raw.fontCount < 5),
       value: t('finding.fonts.value', { n: num.format(raw.fontCount), total: num.format(FONTS.length) }),
     },
-    {
-      id: 'canvas',
-      verdict: verdict(canvas[0] !== canvas[1]),
-      value: t(canvas[0] !== canvas[1] ? 'finding.canvas.noise' : 'finding.canvas.value', { hash: canvas[0] }),
-    },
+    canvas === null ? { id: 'canvas', verdict: 'ok', value: t('finding.canvas.blocked') }
+      : canvas === 'unknown' ? { id: 'canvas', verdict: 'unknown', value: t('finding.canvas.unavailable') }
+      : {
+          id: 'canvas',
+          verdict: verdict(canvas[0] !== canvas[1]),
+          value: t(canvas[0] !== canvas[1] ? 'finding.canvas.noise' : 'finding.canvas.value', { hash: canvas[0] }),
+        },
     audio === null
       ? { id: 'audio', verdict: 'unknown', value: t('finding.audio.unavailable') }
       : {
@@ -161,12 +164,16 @@ function countFonts() {
   return FONTS.filter((name) => bases.some((b, i) => width(`"${name}", ${b}`) !== baseWidths[i])).length;
 }
 
+/**
+ * The drawing as a data URL, or null when readback is blocked or the image is blank.
+ * @returns {string|null}
+ */
 function drawCanvas() {
   const c = document.createElement('canvas');
   c.width = 240;
   c.height = 60;
   const ctx = c.getContext('2d');
-  if (!ctx) return '';
+  if (!ctx) return null;
   ctx.textBaseline = 'top';
   ctx.font = '16px Arial, sans-serif';
   ctx.fillStyle = '#f60';
@@ -183,9 +190,12 @@ function drawCanvas() {
   ctx.arc(80, 30, 20, 0, Math.PI * 2);
   ctx.fill();
   try {
+    // A blocking browser hands back a uniform image: every pixel the same.
+    const px = new Uint32Array(ctx.getImageData(0, 0, c.width, c.height).data.buffer);
+    if (px.every((p) => p === px[0])) return null;
     return c.toDataURL();
   } catch {
-    return '';
+    return null;
   }
 }
 
@@ -254,14 +264,27 @@ async function localCandidates() {
 /** @returns {Promise<RawBrowser>} */
 export async function collectBrowser() {
   const nav = /** @type {Navigator & {deviceMemory?: number, globalPrivacyControl?: boolean}} */ (navigator);
+  // Each probe degrades on its own: a failure gives its unknown (or off) form, never a rejected scan.
   const [canvas, audio, cands] = await Promise.all([
-    Promise.all([hash(drawCanvas()), hash(drawCanvas())]),
     (async () => {
-      const a = await renderAudio();
-      const b = a === null ? null : await renderAudio();
-      return a === null || b === null ? null : /** @type {[string, string]} */ ([await hash(a), await hash(b)]);
+      try {
+        const a = drawCanvas();
+        const b = drawCanvas();
+        return a === null || b === null ? null : /** @type {[string, string]} */ ([await hash(a), await hash(b)]);
+      } catch {
+        return /** @type {'unknown'} */ ('unknown');
+      }
     })(),
-    localCandidates(),
+    (async () => {
+      try {
+        const a = await renderAudio();
+        const b = a === null ? null : await renderAudio();
+        return a === null || b === null ? null : /** @type {[string, string]} */ ([await hash(a), await hash(b)]);
+      } catch {
+        return null;
+      }
+    })(),
+    localCandidates().catch(() => null),
   ]);
   return {
     screen: { w: screen.width, h: screen.height, innerW: innerWidth, innerH: innerHeight, dpr: devicePixelRatio },

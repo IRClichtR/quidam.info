@@ -75,6 +75,14 @@ describe('judgeBrowser', () => {
     expect(v(judge({ canvas: ['11111111', '22222222'] }), 'canvas')).toBe('ok');
     expect(v(judge({ canvas: ['11111111', '11111111'] }), 'canvas')).toBe('leak');
   });
+  it('canvas OK when readback is blocked or blank, CAN\'T TELL when the test fails', () => {
+    const blocked = find(judge({ canvas: null }), 'canvas');
+    expect(blocked.verdict).toBe('ok');
+    expect(blocked.value).toBe('blocked (blank image)');
+    const failed = find(judge({ canvas: 'unknown' }), 'canvas');
+    expect(failed.verdict).toBe('unknown');
+    expect(failed.value).toBe('canvas test could not run');
+  });
   it('audio OK when two renderings hash differently, CAN\'T TELL when audio is unavailable', () => {
     expect(v(judge({ audio: ['11111111', '22222222'] }), 'audio')).toBe('ok');
     expect(v(judge({ audio: ['11111111', '11111111'] }), 'audio')).toBe('leak');
@@ -120,7 +128,7 @@ describe('judgeBrowser', () => {
     expect(judgeBrowser({ ...base, fontCount: 1234 }, t, 'de').find((x) => x.id === 'fonts')?.value).toBe('1.234 of 30 detected');
   });
   it('never shows "undefined"', () => {
-    const f = judge({ cores: undefined, memory: undefined, audio: null, gpc: undefined, gpu: null, localCandidates: null, languages: [] });
+    const f = judge({ cores: undefined, memory: undefined, audio: null, canvas: 'unknown', gpc: undefined, gpu: null, localCandidates: null, languages: [] });
     for (const x of f) {
       expect(x.value, x.id).not.toMatch(/undefined|null|NaN/);
       expect(x.value.trim(), x.id).not.toBe('');
