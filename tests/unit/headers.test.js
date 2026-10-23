@@ -1,3 +1,4 @@
+// @ts-check
 import { describe, it, expect } from 'vitest';
 import { loadConfig } from '../../server/config.js';
 import { securityHeaders } from '../../server/headers.js';

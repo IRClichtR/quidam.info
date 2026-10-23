@@ -1,5 +1,9 @@
+// @ts-check
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import http from 'node:http';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { loadConfig } from '../../server/config.js';
 import { buildAllowlist } from '../../server/static.js';
 import { createApp } from '../../server/app.js';
@@ -88,5 +92,25 @@ describe('static serving', () => {
 
   it('routes /api/whoami to the handler', async () => {
     expect((await raw('GET', '/api/whoami?x=1')).body).toBe('{}');
+  });
+
+  it('survives a client disconnecting mid-download', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lc-'));
+    fs.writeFileSync(path.join(dir, 'big.txt'), Buffer.alloc(8 * 1024 * 1024, 'a'));
+    const m = await buildAllowlist(dir);
+    const s = http.createServer(createApp({ cfg: loadConfig({}), staticMap: m, whoami: () => {} }));
+    await new Promise((r) => s.listen(0, '127.0.0.1', () => r(undefined)));
+    const port = /** @type {any} */ (s.address()).port;
+    await new Promise((resolve) => {
+      const req = http.get({ host: '127.0.0.1', port, path: '/big.txt' }, (res) => {
+        res.once('data', () => { req.destroy(); res.destroy(); resolve(undefined); });
+      });
+      req.on('error', () => {});
+    });
+    await new Promise((r) => setTimeout(r, 100));
+    const r = await new Promise((resolve) => http.get({ host: '127.0.0.1', port, path: '/big.txt' }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode)); }));
+    expect(r).toBe(200);
+    await new Promise((r2) => s.close(() => r2(undefined)));
+    fs.rmSync(dir, { recursive: true });
   });
 });

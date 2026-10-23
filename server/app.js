@@ -1,5 +1,6 @@
 // @ts-check
 import { createReadStream } from 'node:fs';
+import { pipeline } from 'node:stream';
 import { securityHeaders } from './headers.js';
 
 /**
@@ -28,8 +29,6 @@ export function createApp({ cfg, staticMap, whoami }) {
     }
     res.writeHead(200, { 'content-type': entry.type, 'cache-control': 'no-cache' });
     if (req.method === 'HEAD') return void res.end();
-    createReadStream(entry.file)
-      .on('error', () => res.destroy())
-      .pipe(res);
+    pipeline(createReadStream(entry.file), res, () => {});
   };
 }
