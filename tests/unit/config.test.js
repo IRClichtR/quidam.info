@@ -17,3 +17,10 @@ it('accepts the dev IP override in development', () => {
 it('rejects an override that is not an IP of the right family', () => {
   expect(() => loadConfig({ NODE_ENV: 'development', LEAKCHECK_DEV_CLIENT_IP4: '2001:480::1' })).toThrow();
 });
+it('rejects invalid ports', () => {
+  expect(() => loadConfig({ PORT: 'abc' })).toThrow();
+  expect(() => loadConfig({ STUN_PORT: '70000' })).toThrow();
+});
+it('allows port 0', () => {
+  expect(loadConfig({ PORT: '0' }).port).toBe(0);
+});

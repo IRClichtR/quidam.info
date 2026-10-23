@@ -22,21 +22,33 @@ function devIp(value, isRightFamily, name, dev) {
 }
 
 /**
+ * @param {string|undefined} value
+ * @param {number} fallback
+ * @param {string} name
+ * @returns {number}
+ */
+function port(value, fallback, name) {
+  const n = value === undefined ? fallback : Number(value);
+  if (!Number.isInteger(n) || n < 0 || n > 65535) throw new Error(`${name} must be an integer 0-65535: ${value}`);
+  return n;
+}
+
+/**
  * @param {Record<string, string|undefined>} env
  * @returns {Config}
  */
 export function loadConfig(env) {
-  const port = Number(env.PORT ?? 8080);
+  const httpPort = port(env.PORT, 8080, 'PORT');
   const dev = env.NODE_ENV === 'development';
   return {
-    port,
-    stunPort: Number(env.STUN_PORT ?? 3478),
+    port: httpPort,
+    stunPort: port(env.STUN_PORT, 3478, 'STUN_PORT'),
     dev,
     devClientIp4: devIp(env.LEAKCHECK_DEV_CLIENT_IP4, isIPv4, 'LEAKCHECK_DEV_CLIENT_IP4', dev),
     devClientIp6: devIp(env.LEAKCHECK_DEV_CLIENT_IP6, isIPv6, 'LEAKCHECK_DEV_CLIENT_IP6', dev),
-    siteOrigin: env.SITE_ORIGIN ?? `http://localhost:${port}`,
-    v4Origin: env.V4_ORIGIN ?? `http://127.0.0.1:${port}`,
-    v6Origin: env.V6_ORIGIN ?? `http://[::1]:${port}`,
+    siteOrigin: env.SITE_ORIGIN ?? `http://localhost:${httpPort}`,
+    v4Origin: env.V4_ORIGIN ?? `http://127.0.0.1:${httpPort}`,
+    v6Origin: env.V6_ORIGIN ?? `http://[::1]:${httpPort}`,
     dataDir: env.LEAKCHECK_DATA_DIR ?? 'data',
     refresh: env.LEAKCHECK_REFRESH !== '0',
   };
