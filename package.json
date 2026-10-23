@@ -10,7 +10,8 @@
     "test": "vitest run",
     "start": "node server/main.js",
     "e2e": "playwright test",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "fonts": "node scripts/fetch-fonts.js"
   },
   "repository": {
     "type": "git",

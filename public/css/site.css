@@ -1,0 +1,318 @@
+/* leakcheck: one stylesheet. Tokens follow the system theme; no inline styles (CSP). */
+
+:root {
+  --bg: #121212;
+  --fg: #EDEDED;
+  --soft: #CFCFCF;
+  --muted: #A3A3A3;
+  --line: #2E2E2E;
+  --panel: #1C1C1C;
+  --red: #FF7469;
+  --on-red: #121212;
+  --safe: #22D3EE;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #FAFAFA;
+    --fg: #111111;
+    --soft: #333333;
+    --muted: #545454;
+    --line: #D4D4D4;
+    --panel: #EFEFEF;
+    --red: #A1201A;
+    --on-red: #FFFFFF;
+    --safe: #005A6B;
+    color-scheme: light;
+  }
+}
+
+@font-face {
+  font-family: 'VCR OSD Mono';
+  src: url('../fonts/VCR_OSD_MONO.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'VT323';
+  src: url('../fonts/VT323-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../fonts/IBMPlexMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../fonts/IBMPlexMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../fonts/IBMPlexMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* ---------- base ---------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  font-size: 1rem;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+h1, h2, h3, p, ul, ol { margin: 0; }
+
+a { color: inherit; text-underline-offset: 0.2em; }
+a:hover { text-decoration-thickness: 2px; }
+
+:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+
+.pixel,
+h1, h2,
+.btn, .tag, .tile-num {
+  font-family: 'VCR OSD Mono', 'VT323', monospace;
+  font-weight: 400;
+}
+
+.wrap {
+  max-width: 70rem;
+  margin: 0 auto;
+  padding-inline: clamp(1rem, 4vw, 3rem);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link: hidden until focused, then shown top left. */
+.skip {
+  position: absolute;
+  left: 0.5rem;
+  top: 0.5rem;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  background: var(--bg);
+  color: var(--fg);
+  border: 2px solid var(--fg);
+}
+.skip:not(:focus) {
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- header ---------- */
+
+.site-header { border-bottom: 1px solid var(--line); }
+.site-header .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding-block: 1rem;
+}
+
+.brand { font-size: clamp(1.25rem, 9vw, 1.75rem); line-height: 1; overflow-wrap: anywhere; }
+.brand-cursor { color: var(--red); }
+
+.nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1.25rem; font-size: 0.9375rem; }
+.nav a, .footer-links a { display: inline-flex; align-items: center; min-height: 44px; }
+
+.picker { display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.5rem; font-size: 0.9375rem; }
+.picker a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+.picker a[aria-current="page"] { font-weight: 700; text-decoration: none; }
+.picker-sep { color: var(--muted); }
+
+.header-end { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1.25rem; }
+.stored { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--safe); }
+.stored svg { flex: none; width: 1em; height: 1em; }
+
+/* ---------- main ---------- */
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 4.5rem;
+  padding-block: 4rem 3rem;
+}
+
+.hero { display: flex; flex-direction: column; gap: 1.5rem; }
+.hero-prompt { color: var(--muted); font-size: 0.9375rem; overflow-wrap: anywhere; }
+.hero h1 {
+  font-size: clamp(2.25rem, 6.5vw, 4.5rem);
+  line-height: 1.05;
+  max-width: 18ch;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.8em;
+  margin-left: 0.1em;
+  background: var(--red);
+  vertical-align: baseline;
+}
+.lead { max-width: 60ch; color: var(--soft); font-size: 1.0625rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  min-height: 48px;
+  padding: 0.75rem 1.75rem;
+  border: 2px solid var(--red);
+  border-radius: 0;
+  background: var(--red);
+  color: var(--on-red);
+  font-size: 1.5rem;
+  line-height: 1;
+  text-transform: uppercase;
+  text-align: center;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.btn-secondary { background: transparent; color: var(--fg); border-color: var(--fg); }
+.btn:focus-visible { outline-color: var(--fg); }
+
+/* ---------- tags ---------- */
+
+.tag {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 100%;
+  padding: 0.25rem 0.625rem;
+  border: 2px solid currentColor;
+  font-size: 1.125rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.tag svg { flex: none; width: 0.75em; height: 0.75em; }
+.tag-leak { background: var(--red); border-color: var(--red); color: var(--on-red); }
+.tag-ok { background: transparent; color: var(--safe); }
+.tag-unknown { background: transparent; color: var(--fg); border-style: dashed; }
+
+/* ---------- summary ---------- */
+
+.summary { display: flex; flex-direction: column; gap: 0.75rem; }
+.label {
+  font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  font-size: 0.8125rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.hint { color: var(--soft); }
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.tiles:empty { display: none; }
+.tile { display: flex; flex-direction: column; gap: 0.375rem; padding: 1.5rem; background: var(--bg); }
+.tile-num {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 3.5rem;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.tile-num svg { flex: none; width: 1.75rem; height: 1.75rem; }
+.tile-leak { color: var(--red); }
+.tile-ok { color: var(--safe); }
+.tile-text { color: var(--soft); font-size: 0.9375rem; }
+
+/* ---------- sections ---------- */
+
+.block { display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 1rem; }
+.block-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 3px solid var(--fg);
+}
+.block-head h2 { font-size: clamp(1.75rem, 4vw, 2.5rem); line-height: 1.05; overflow-wrap: anywhere; }
+.prompt { color: var(--red); }
+.block-sub { color: var(--muted); font-size: 0.9375rem; }
+
+/* Finding rows (filled by later tasks). */
+.findings { list-style: none; padding: 0; display: flex; flex-direction: column; }
+.findings > li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-block: 0.875rem;
+  border-bottom: 1px solid var(--line);
+}
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem 1.5rem; }
+.row-label { flex: 0 1 13.75rem; color: var(--muted); font-size: 0.9375rem; }
+.row-value { flex: 1 1 16rem; min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
+
+/* Explanation panel: only fg and soft text sit on panel (contrast). */
+.panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem 2rem;
+  padding: 1.25rem;
+  background: var(--panel);
+  color: var(--fg);
+}
+.panel .label { color: var(--soft); font-weight: 700; }
+
+/* ---------- footer ---------- */
+
+.site-footer { border-top: 1px solid var(--line); }
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 1.5rem;
+  padding-block: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.footer-links p { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0 0.5rem; min-height: 44px; }

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>leakcheck: what does your device tell every website?</title>
+<meta name="description" content="See, live, what your browser and connection reveal to every website, then get a ranked plan to reduce it. Runs in your browser; nothing is stored.">
+<link rel="alternate" hreflang="en" href="/en/">
+<link rel="alternate" hreflang="fr" href="/fr/">
+<link rel="alternate" hreflang="es" href="/es/">
+<link rel="alternate" hreflang="x-default" href="/">
+<link rel="stylesheet" href="/css/site.css">
+<script type="module" src="/js/app.js"></script>
+</head>
+<body>
+<a class="skip" id="skip" href="#results" data-i18n="skip">Skip to results</a>
+
+<header class="site-header">
+<div class="wrap">
+<div class="brand pixel">leakcheck<span class="brand-cursor" aria-hidden="true">_</span></div>
+<nav class="nav" aria-label="Sections" data-i18n-attr="aria-label:nav.sections">
+<a href="#browser" data-i18n="nav.browser">browser</a>
+<a href="#connection" data-i18n="nav.connection">connection</a>
+<a href="#localnet" data-i18n="nav.localnet">local network</a>
+<a href="#fix" data-i18n="nav.fix">fix it</a>
+</nav>
+<div class="header-end">
+<nav class="picker" aria-label="Language" data-i18n-attr="aria-label:nav.language">
+<a href="/en/" hreflang="en" lang="en" data-i18n="lang.en">English</a><span class="picker-sep" aria-hidden="true"> · </span><a href="/fr/" hreflang="fr" lang="fr" data-i18n="lang.fr">Français</a><span class="picker-sep" aria-hidden="true"> · </span><a href="/es/" hreflang="es" lang="es" aria-current="page" data-i18n="lang.es">Español</a>
+</nav>
+<div class="stored">
+<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 2.5 3.8v4c0 3.3 2.3 5.6 5.5 6.7 3.2-1.1 5.5-3.4 5.5-6.7v-4Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+<span data-i18n="header.stored" data-n="0">0 bytes stored</span>
+</div>
+</div>
+</div>
+</header>
+
+<main class="wrap">
+
+<section class="hero" aria-labelledby="hero-title">
+<p class="hero-prompt" data-i18n="hero.prompt">$ leakcheck --scan --local-only</p>
+<h1 id="hero-title"><span data-i18n="hero.title">what does your device tell every website?</span><span class="cursor" aria-hidden="true"></span></h1>
+<p class="lead" data-i18n="hero.lead">The tests run inside your browser. The results never leave this tab, and nothing is saved when you close it.</p>
+<div class="actions">
+<button type="button" class="btn" id="run-scan" data-i18n="scan.run">RUN THE SCAN</button>
+</div>
+</section>
+
+<section class="summary" id="results" tabindex="-1" aria-labelledby="results-title">
+<h2 class="label" id="results-title" data-i18n="results.title">scan summary</h2>
+<div class="tiles"></div>
+<p class="hint" data-i18n="results.empty">No scan yet. Press RUN THE SCAN to see what this browser gives away.</p>
+</section>
+
+<section class="block" id="browser" aria-labelledby="browser-title">
+<div class="block-head">
+<h2 id="browser-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.browser.title">your browser</span></h2>
+<p class="block-sub" data-i18n="section.browser.sub">read by any page, no permission asked</p>
+</div>
+<ul class="findings"></ul>
+</section>
+
+<section class="block" id="connection" aria-labelledby="connection-title">
+<div class="block-head">
+<h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">your connection</span></h2>
+<p class="block-sub" data-i18n="section.connection.sub">runs only when you click, contacts only leakcheck's own server</p>
+</div>
+<ul class="findings"></ul>
+</section>
+
+<section class="block" id="localnet" aria-labelledby="localnet-title">
+<div class="block-head">
+<h2 id="localnet-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.localnet.title">your local network</span></h2>
+<p class="block-sub" data-i18n="section.localnet.sub">needs your permission</p>
+</div>
+<ul class="findings"></ul>
+</section>
+
+<section class="block" id="fix" aria-labelledby="fix-title">
+<div class="block-head">
+<h2 id="fix-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.fix.title">your fix plan</span></h2>
+<p class="block-sub" data-i18n="section.fix.sub">A short list ordered by how much each change hides, with steps for your browser.</p>
+</div>
+<div class="fix-plan"></div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+<div class="wrap footer-links">
+<p><span data-i18n="footer.cookies">no cookies</span><span aria-hidden="true"> · </span><span data-i18n="footer.analytics">no analytics</span><span aria-hidden="true"> · </span><span data-i18n="footer.source">open source</span></p>
+<a href="https://db-ip.com" data-i18n="footer.dbip">IP data by DB-IP</a>
+</div>
+</footer>
+
+<div id="announce" class="sr-only" aria-live="polite"></div>
+</body>
+</html>
