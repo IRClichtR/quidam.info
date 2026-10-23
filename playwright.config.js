@@ -16,7 +16,7 @@ export default defineConfig({
       LEAKCHECK_DATA_DIR: 'tests/fixtures/data',
       LEAKCHECK_REFRESH: '0',
       LEAKCHECK_DEV_CLIENT_IP4: '81.2.69.142',
-      LEAKCHECK_DEV_CLIENT_IP6: '2001:480::1',
+      LEAKCHECK_DEV_CLIENT_IP6: '2001:480:10::1',
     },
   },
 });
