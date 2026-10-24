@@ -106,3 +106,10 @@ Menu names to confirm:
 - [ ] Write the privacy notice in English, French and Spanish during the hosting step.
 - [ ] Write the French legal notice (mentions légales: publisher, host, contact) during the hosting step.
 - [ ] Link both from the footer of every language page.
+
+## I. Manual checks still to do
+
+- [ ] Phone on the same Wi-Fi: start `NODE_ENV=development npm start` on the dev machine and open `http://<LAN IP>:8080/en/` (the server was confirmed to answer on the LAN address with curl, but no phone has loaded it yet).
+- [ ] Run all three sections (browser, connection, local network) on the phone.
+- [ ] Toggle a VPN on the phone and run the VPN-off recheck both ways.
+- [ ] Expect CAN'T TELL on the canvas and audio rows: plain http over a LAN IP is not a secure context, so `crypto.subtle` is unavailable. This is not a bug; recheck on HTTPS once hosted.
