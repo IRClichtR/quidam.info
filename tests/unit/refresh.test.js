@@ -182,3 +182,28 @@ it('start() schedules per-source intervals and stop() clears them', async () => 
   await vi.advanceTimersByTimeAsync(30 * 24 * 3_600_000);
   expect(seen.length).toBe(n);
 });
+
+it('refreshAll({ onlyStale: true }) skips files younger than their interval, and fetches missing ones', async () => {
+  const dir = tmp();
+  copyAll(dir);
+  const at = (/** @type {number} */ msAgo) => new Date(now().getTime() - msAgo);
+  // DB-IP weekly, relay list daily: fresh. Tor list hourly: two hours old, so stale.
+  fs.utimesSync(path.join(dir, 'dbip-city-lite.mmdb'), at(6 * 86_400_000), at(6 * 86_400_000));
+  fs.utimesSync(path.join(dir, 'relay-ranges.csv'), at(3_600_000), at(3_600_000));
+  fs.utimesSync(path.join(dir, 'tor-exits.txt'), at(2 * 3_600_000), at(2 * 3_600_000));
+  fs.utimesSync(path.join(dir, 'dbip-asn-lite.mmdb'), at(60_000), at(60_000));
+  const seen = /** @type {string[]} */ ([]);
+  const store = createDataStore({ dataDir: dir, fetch: fakeFetch(seen), now });
+  await store.loadFromDisk();
+  await store.refreshAll({ onlyStale: true });
+  expect(seen).toEqual(['https://check.torproject.org/torbulkexitlist']);
+
+  fs.rmSync(path.join(dir, 'relay-ranges.csv'));
+  seen.length = 0;
+  await store.refreshAll({ onlyStale: true });
+  expect(seen).toEqual(['https://mask-api.icloud.com/egress-ip-ranges.csv']);
+
+  seen.length = 0;
+  await store.refreshAll();
+  expect(seen).toHaveLength(4);
+});

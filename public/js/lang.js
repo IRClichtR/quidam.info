@@ -17,7 +17,16 @@ export function pickLanguage(prefs) {
   return 'en';
 }
 
-// On the root page, open the matching language. Decided here, nothing is sent anywhere.
-if (typeof location !== 'undefined' && location.pathname === '/') {
-  location.replace('/' + pickLanguage(navigator.languages ?? []) + '/');
+/**
+ * Where the root page (`/` or `/index.html`) should go; null on any other page.
+ * @param {string} pathname
+ * @param {readonly string[]} prefs
+ * @returns {string|null}
+ */
+export function languageRedirect(pathname, prefs) {
+  return pathname === '/' || pathname === '/index.html' ? '/' + pickLanguage(prefs) + '/' : null;
 }
+
+// On the root page, open the matching language. Decided here, nothing is sent anywhere.
+const target = typeof location === 'undefined' ? null : languageRedirect(location.pathname, navigator.languages ?? []);
+if (target) location.replace(target);

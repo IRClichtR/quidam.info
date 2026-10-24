@@ -73,6 +73,18 @@ describe('static serving', () => {
     }
   });
 
+  it('301s a language path without its trailing slash, with the security headers', async () => {
+    for (const lang of ['en', 'fr', 'es']) {
+      const r = await raw('GET', `/${lang}`);
+      expect(r.status).toBe(301);
+      expect(r.headers.location).toBe(`/${lang}/`);
+      expect(r.headers['content-security-policy']).toBeTruthy();
+    }
+    expect((await raw('GET', '/fr?x=1')).headers.location).toBe('/fr/?x=1');
+    expect((await raw('HEAD', '/es')).status).toBe(301);
+    expect((await raw('GET', '/de')).status).toBe(404);
+  });
+
   it('ignores query strings', async () => {
     expect((await raw('GET', '/en/?x=1')).status).toBe(200);
   });

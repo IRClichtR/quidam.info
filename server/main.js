@@ -9,6 +9,7 @@ import { createWhoamiHandler } from './whoami.js';
 import { createRateLimiter } from './ratelimit.js';
 import { createApp } from './app.js';
 import { startStun } from './stun.js';
+import { listenDualStack } from './listen.js';
 import { isIPv4 } from 'node:net';
 
 const cfg = loadConfig(process.env);
@@ -17,7 +18,7 @@ await fs.mkdir(cfg.dataDir, { recursive: true });
 const store = createDataStore({ dataDir: cfg.dataDir, fetch });
 await store.loadFromDisk();
 if (cfg.refresh) {
-  store.refreshAll();
+  store.refreshAll({ onlyStale: true });
   store.start();
 }
 
@@ -31,10 +32,7 @@ const whoami = createWhoamiHandler({
 const server = http.createServer(createApp({ cfg, staticMap, whoami }));
 server.requestTimeout = 10_000;
 server.headersTimeout = 10_000;
-await new Promise((resolve, reject) => {
-  server.once('error', reject);
-  server.listen({ port: cfg.port, host: '::', ipv6Only: false }, () => resolve(undefined));
-});
+await listenDualStack(server, cfg.port);
 
 const stun = await startStun({
   port: cfg.stunPort,

@@ -6,7 +6,7 @@ import { state } from './state.js';
 import { fetchWhoami, gatherSrflx, judgeConnection, compareVpnOff, stunUrls, primaryLookup } from './connection.js';
 import { probeRouters, permissionState, probeTimeout, judgeLocalnet } from './localnet.js';
 import zoneCountries from './tz-countries.js';
-import { FIXES, orderFixes, detectBrowser, buildFixCards } from './fixes.js';
+import { FIXES, orderFixes, detectBrowser, buildFixCards, rescanText } from './fixes.js';
 
 const root = document.documentElement;
 await loadStrings(root.lang);
@@ -34,7 +34,7 @@ function counts(findings) {
 
 /** The summary tiles count every section's findings together. */
 function updateSummary() {
-  renderSummary(/** @type {HTMLElement} */ (document.querySelector('#results .tiles')), [...state.browser, ...state.connection, ...state.localnet], t);
+  renderSummary(/** @type {HTMLElement} */ (document.querySelector('#results .tiles')), [...state.browser, ...state.connection, ...state.localnet], t, state.browser.length > 0);
   const hint = document.querySelector('#results .hint');
   if (hint instanceof HTMLElement) hint.hidden = true;
 }
@@ -88,6 +88,8 @@ async function runConnection() {
   checking = true;
   state.ran.connection = true;
   connBtn.setAttribute('aria-disabled', 'true');
+  // An old VPN-off answer would describe the previous check.
+  vpnOffResult.textContent = '';
   announce(t('connection.running'));
   try {
     const originsRes = await fetch('/api/origins', { credentials: 'omit', cache: 'no-store' }).catch(() => null);
@@ -134,13 +136,16 @@ vpnOffBtn.addEventListener('click', async () => {
   vpnOffResult.textContent = '';
   try {
     // Compare like with like: the main lookup if it has the first address's family, else that family's origin.
-    const main = primaryLookup(await fetchWhoami(''), null, null);
+    const lookups = [await fetchWhoami('')];
+    const main = primaryLookup(lookups[0], null, null);
     let after = main?.family === first.family ? main : null;
     if (!after && state.origins) {
-      after = primaryLookup(await fetchWhoami(first.family === 4 ? state.origins.v4 : state.origins.v6), null, null);
+      lookups.push(await fetchWhoami(first.family === 4 ? state.origins.v4 : state.origins.v6));
+      after = primaryLookup(lookups[1], null, null);
     }
     after ??= main;
-    vpnOffResult.textContent = after ? t(`connection.vpnOff.${compareVpnOff(first, after)}`) : t('connection.vpnOff.failed');
+    const failed = lookups.includes('busy') ? 'finding.publicIp.busy' : 'connection.vpnOff.failed';
+    vpnOffResult.textContent = after ? t(`connection.vpnOff.${compareVpnOff(first, after)}`) : t(failed);
   } finally {
     rechecking = false;
     vpnOffBtn.removeAttribute('aria-disabled');
@@ -227,14 +232,15 @@ rescanBtn.addEventListener('click', async () => {
   rescanning = true;
   rescanBtn.setAttribute('aria-disabled', 'true');
   rescanResult.textContent = '';
-  const before = leaking();
+  vpnOffResult.textContent = '';
+  const before = state.browser.length ? leaking() : null;
   try {
     announce(t('fix.rescan.running'));
     await runScan();
     if (state.ran.connection) await runConnection();
     if (state.ran.localnet) await runLocalnet();
     const num = new Intl.NumberFormat(root.lang);
-    const text = t('fix.rescan.result', { before: num.format(before), after: num.format(leaking()) });
+    const text = rescanText(t, before === null ? null : num.format(before), num.format(leaking()));
     rescanResult.textContent = text;
     announce(text);
   } finally {

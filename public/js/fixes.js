@@ -189,3 +189,13 @@ export function buildFixCards({ t, tList, browser, lang, onToggle }) {
   }
   return cards;
 }
+
+/**
+ * The rescan result: leak counts before and after, or only after when there was nothing to compare with.
+ * @param {T} t
+ * @param {string|null} before formatted count, null when the browser scan had not run
+ * @param {string} after formatted count
+ */
+export function rescanText(t, before, after) {
+  return before === null ? t('fix.rescan.after', { after }) : t('fix.rescan.result', { before, after });
+}

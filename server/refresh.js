@@ -129,8 +129,18 @@ export function createDataStore({ dataDir, fetch: doFetch, now = () => new Date(
     async loadFromDisk() {
       await Promise.all(sources.map(loadOne));
     },
-    async refreshAll() {
-      await Promise.all(sources.map(refreshOne));
+    /**
+     * Download every source; with `onlyStale`, only those whose file is missing or older than its interval
+     * (so a restart does not fetch everything again).
+     * @param {{ onlyStale?: boolean }} [opts]
+     */
+    async refreshAll({ onlyStale = false } = {}) {
+      /** @param {typeof sources[number]} s */
+      const stale = async (s) => {
+        const st = await fs.stat(path.join(dataDir, s.file)).catch(() => null);
+        return !st || now().getTime() - st.mtimeMs >= s.every;
+      };
+      await Promise.all(sources.map(async (s) => { if (!onlyStale || await stale(s)) await refreshOne(s); }));
     },
     start() {
       this.stop();

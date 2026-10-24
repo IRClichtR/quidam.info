@@ -105,12 +105,14 @@ export function renderFindings(listEl, findings, t) {
 }
 
 /**
- * Three tiles: how many leak, how many are protected, and uniqueness in words.
+ * Three tiles: how many leak, how many are protected, and uniqueness in words
+ * ("not scanned yet" until the browser scan has run).
  * @param {HTMLElement} tilesEl
  * @param {Finding[]} findings
  * @param {T} t
+ * @param {boolean} [scanned] whether the browser scan has run
  */
-export function renderSummary(tilesEl, findings, t) {
+export function renderSummary(tilesEl, findings, t, scanned = true) {
   const num = new Intl.NumberFormat(document.documentElement.lang || 'en');
   /** @param {'leak'|'ok'} kind */
   const countTile = (kind) => {
@@ -121,7 +123,7 @@ export function renderSummary(tilesEl, findings, t) {
     return tile;
   };
   const unique = el('div', 'tile');
-  unique.append(el('div', 'tile-num tile-word', t(`summary.unique.${uniqueness(findings)}`)), el('p', 'tile-text', t('summary.unique.sub')));
+  unique.append(el('div', 'tile-num tile-word', t(`summary.unique.${scanned ? uniqueness(findings) : 'none'}`)), el('p', 'tile-text', t('summary.unique.sub')));
   tilesEl.replaceChildren(countTile('leak'), countTile('ok'), unique);
 }
 

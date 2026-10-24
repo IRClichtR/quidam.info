@@ -5,7 +5,7 @@
 /** @typedef {import('./browser.js').T} T */
 /** @typedef {{ ip: string, family: 4|6, country: string|null, city: string|null, asn: number|null,
  *   asOrg: string|null, tor: boolean, privateRelay: boolean }} Whoami */
-/** @typedef {Whoami|null|'unavailable'} Lookup */
+/** @typedef {Whoami|null|'unavailable'|'busy'} Lookup */
 /** @typedef {{v4: string[], v6: string[]}} Srflx */
 /** @typedef {{v4: string, v6: string, stunPort: number}} Origins */
 
@@ -57,7 +57,8 @@ export function primaryLookup(main, v4, v6) {
  * @param {string} origin
  * @param {typeof fetch} [fetchFn]
  * @param {number} [timeoutMs]
- * @returns {Promise<Lookup>} null on timeout or network error, 'unavailable' when the server has no data
+ * @returns {Promise<Lookup>} null on timeout or network error, 'unavailable' when the server has no data,
+ *   'busy' when it is rate-limiting this address
  */
 export async function fetchWhoami(origin, fetchFn = fetch, timeoutMs = 3000) {
   const ctrl = new AbortController();
@@ -69,6 +70,7 @@ export async function fetchWhoami(origin, fetchFn = fetch, timeoutMs = 3000) {
   const lookup = (async () => {
     const res = await fetchFn(`${origin}/api/whoami`, { signal: ctrl.signal, credentials: 'omit', cache: 'no-store' });
     if (res.status === 503) return 'unavailable';
+    if (res.status === 429) return 'busy';
     if (!res.ok) return null;
     const body = await res.json();
     return isWhoami(body) ? body : null;
@@ -135,6 +137,16 @@ export async function gatherSrflx(urls, timeoutMs = 5000) {
 }
 
 /**
+ * Whether the IPv6 lookup comes from another network than the IPv4 one: an IPv4-only VPN
+ * leaves IPv6 on the provider's network. Tor and Private Relay are left out, as are unknown networks.
+ * @param {Lookup} v4 @param {Whoami} v6
+ */
+function otherNetwork(v4, v6) {
+  if (!isWhoami(v4) || [v4, v6].some((w) => w.tor || w.privateRelay)) return false;
+  return v4.asn !== null && v6.asn !== null && v4.asn !== v6.asn;
+}
+
+/**
  * Decide the connection findings.
  * `main` is the lookup on this page's origin; `v4`/`v6` the lookups on the single-family origins.
  * @param {{main: Lookup, v4: Lookup, v6: Lookup, srflx: Srflx|null, timeZone: string,
@@ -147,14 +159,17 @@ export function judgeConnection({ main, v4, v6, srflx, timeZone, zoneCountries, 
   const show = (ip) => (reveal ? ip : maskIp(ip));
   const who = primaryLookup(main, v4, v6);
   if (!who) {
-    const unavailable = [main, v4, v6].includes('unavailable');
-    return [{ id: 'publicIp', verdict: 'unknown', value: t(unavailable ? 'finding.publicIp.unavailable' : 'finding.publicIp.failed') }];
+    const all = [main, v4, v6];
+    const key = all.includes('busy') ? 'busy' : all.includes('unavailable') ? 'unavailable' : 'failed';
+    return [{ id: 'publicIp', verdict: 'unknown', value: t(`finding.publicIp.${key}`) }];
   }
   const hidden = who.tor || who.privateRelay;
+  // A zone with no country (such as UTC) says nothing about where the browser is.
+  const zone = zoneCountries[timeZone];
   /** @type {import('./browser.js').Verdict} */
   const home = hidden ? 'ok'
-    : who.country === null ? 'unknown'
-      : zoneCountries[timeZone]?.includes(who.country) ? 'leak' : 'ok';
+    : who.country === null || zone === undefined ? 'unknown'
+      : zone.includes(who.country) ? 'leak' : 'ok';
   const ipKey = who.tor ? 'finding.publicIp.tor' : who.privateRelay ? 'finding.publicIp.relay' : 'finding.publicIp.value';
   const asn = who.asn === null ? null : `AS${who.asn}`;
   const provider = [who.asOrg, asn].filter((x) => x !== null).join(' · ');
@@ -170,9 +185,11 @@ export function judgeConnection({ main, v4, v6, srflx, timeZone, zoneCountries, 
     if (!isWhoami(lookup)) continue;
     // Any interface showing another address is a leak, even if another one matches.
     const other = (seen ?? []).filter((ip) => !sameIp(ip, lookup.ip));
-    if (!seen?.length) out.push({ id, verdict: 'unknown', value: t('finding.vpn.none') });
-    else if (!other.length) out.push({ id, verdict: 'ok', value: t('finding.vpn.same', { ip: show(lookup.ip) }) });
-    else out.push({ id, verdict: 'leak', value: t('finding.vpn.other', { ip: other.map(show).join(', ') }) });
+    if (other.length) out.push({ id, verdict: 'leak', value: t('finding.vpn.other', { ip: other.map(show).join(', ') }) });
+    else if (id === 'vpn6' && otherNetwork(v4, lookup)) {
+      out.push({ id, verdict: 'leak', value: t('finding.vpn.otherNetwork', { v6: `AS${lookup.asn}`, v4: `AS${/** @type {Whoami} */ (v4).asn}` }) });
+    } else if (!seen?.length) out.push({ id, verdict: 'unknown', value: t('finding.vpn.none') });
+    else out.push({ id, verdict: 'ok', value: t('finding.vpn.same', { ip: show(lookup.ip) }) });
   }
   return out;
 }

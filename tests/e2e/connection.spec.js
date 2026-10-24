@@ -153,6 +153,16 @@ test('the VPN-off recheck says "same" when both lookups match', async ({ page })
   await expect(page.locator('#vpn-off-result')).toHaveText("same: your VPN isn't hiding your IP");
 });
 
+test('re-running the check clears the VPN-off result', async ({ page }) => {
+  await cannedWhoami(page);
+  await open(page);
+  await check(page);
+  await page.locator('#vpn-off').click();
+  await expect(page.locator('#vpn-off-result')).toHaveText("same: your VPN isn't hiding your IP");
+  await check(page);
+  await expect(page.locator('#vpn-off-result')).toHaveText('');
+});
+
 test('the VPN-off recheck says "different" when the second lookup changed', async ({ page }) => {
   await cannedWhoami(page);
   await open(page);
@@ -187,4 +197,13 @@ test('the summary counts browser and connection findings together', async ({ pag
   const ok = Number(await page.locator('#results .tile-ok span').textContent());
   expect(leak).toBe(await page.locator('#browser .tag-leak, #connection .tag-leak').count());
   expect(ok).toBe(await page.locator('#browser .tag-ok, #connection .tag-ok').count());
+});
+
+test('with only the connection checked, the uniqueness tile says the browser is not scanned yet', async ({ page }) => {
+  await cannedWhoami(page);
+  await open(page);
+  await check(page);
+  const tile = page.locator('#results .tiles .tile').nth(2);
+  await expect(tile).toContainText('not scanned yet');
+  await expect(tile).not.toContainText('blends in');
 });

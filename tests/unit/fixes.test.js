@@ -1,6 +1,7 @@
 // @ts-check
 import { describe, it, expect } from 'vitest';
-import { FIXES, orderFixes, detectBrowser, BROWSERS } from '../../public/js/fixes.js';
+import { FIXES, orderFixes, detectBrowser, BROWSERS, rescanText } from '../../public/js/fixes.js';
+import { loadStrings, t } from '../../public/js/i18n.js';
 import en from '../../public/js/i18n/en.js';
 import fr from '../../public/js/i18n/fr.js';
 import es from '../../public/js/i18n/es.js';
@@ -82,5 +83,13 @@ describe('the Hide your IP card', () => {
       expect(keys.length, lang).toBeGreaterThan(0);
       for (const k of keys) expect(JSON.stringify(strings[k]), `${lang} ${k}`).not.toMatch(/mullvad|proton|nord|express|ivpn|nym/i);
     }
+  });
+});
+
+describe('rescanText', () => {
+  it('shows before and after, or only after when nothing was scanned before', async () => {
+    await loadStrings('en');
+    expect(rescanText(t, '3', '1')).toBe('leaking: 3 → 1');
+    expect(rescanText(t, null, '4')).toBe('leaking now: 4');
   });
 });

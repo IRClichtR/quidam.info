@@ -158,6 +158,14 @@ test('RESCAN TO VERIFY shows before and after counts and reruns only the checks 
   expect(requested.filter((u) => !u.includes('/api/whoami'))).toEqual([]);
 });
 
+test('RESCAN TO VERIFY with no earlier browser scan shows only the new count', async ({ page }) => {
+  await stub(page);
+  await open(page);
+  await showFixes(page);
+  await page.getByRole('button', { name: 'RESCAN TO VERIFY' }).click();
+  await expect(page.locator('#rescan-result')).toHaveText(/^leaking now: \d+$/);
+});
+
 test('the open plan at 320px with 200% text has no horizontal scroll and no clipped text', async ({ page }) => {
   await stub(page);
   await page.setViewportSize({ width: 320, height: 800 });

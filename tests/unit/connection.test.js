@@ -13,7 +13,8 @@ const who = (over = {}) => ({
   ip: '81.2.69.142', family: 4, country: 'GB', city: 'London', asn: 20712, asOrg: 'Andrews & Arnold Ltd',
   tor: false, privateRelay: false, ...over,
 });
-const V6 = who({ ip: '2001:480:10::1', family: 6, country: 'US', city: 'San Diego', asn: 668, asOrg: 'DoD' });
+// Same network as the IPv4 lookup, as on a dual-stack line without a VPN.
+const V6 = who({ ip: '2001:480:10::1', family: 6, country: 'US', city: 'San Diego' });
 const ZONES = { 'Europe/Paris': ['FR', 'MC'], 'Europe/London': ['GB', 'GG', 'IM', 'JE'] };
 
 /** @param {Partial<Parameters<typeof judgeConnection>[0]>} over */
@@ -111,6 +112,47 @@ describe('judgeConnection', () => {
     expect(find(judge({ v6: 'unavailable' }), 'vpn6')).toBeUndefined();
   });
 
+  it('vpn6: LEAK when the IPv6 address is on another network than the IPv4 one (IPv4-only VPN)', () => {
+    const fs = judge({ v6: who({ ...V6, asn: 668 }), srflx: { v4: ['81.2.69.142'], v6: ['2001:480:10::1'] } });
+    expect(find(fs, 'vpn6')).toMatchObject({ verdict: 'leak', value: 'IPv6 from a different network than IPv4 (AS668 vs AS20712)' });
+    expect(find(fs, 'vpn4')?.verdict).toBe('ok');
+    // Without WebRTC the network rule still applies.
+    expect(find(judge({ v6: who({ ...V6, asn: 668 }), srflx: null }), 'vpn6')?.verdict).toBe('leak');
+  });
+
+  it('vpn6: OK when both lookups share a network and WebRTC matches', () => {
+    expect(find(judge({ srflx: { v4: [], v6: ['2001:480:10::1'] } }), 'vpn6')?.verdict).toBe('ok');
+  });
+
+  it('vpn6: the network rule skips Tor, Private Relay and unknown networks', () => {
+    const other = who({ ...V6, asn: 668 });
+    const srflx = { v4: [], v6: ['2001:480:10::1'] };
+    expect(find(judge({ v6: { ...other, tor: true }, srflx }), 'vpn6')?.verdict).toBe('ok');
+    expect(find(judge({ v4: who({ tor: true }), v6: other, srflx }), 'vpn6')?.verdict).toBe('ok');
+    expect(find(judge({ v4: who({ privateRelay: true }), v6: other, srflx }), 'vpn6')?.verdict).toBe('ok');
+    expect(find(judge({ v6: { ...other, asn: null }, srflx }), 'vpn6')?.verdict).toBe('ok');
+    expect(find(judge({ v4: null, v6: other, srflx }), 'vpn6')?.verdict).toBe('ok');
+    expect(find(judge({ v6: null }), 'vpn6')).toBeUndefined();
+  });
+
+  it('the vpn6 panel explains IPv4-only VPNs and the network comparison', () => {
+    expect(t('finding.vpn6.why')).toMatch(/only carry IPv4.*provider.*compares the networks/s);
+  });
+
+  it('location and provider: CAN\'T TELL when the time zone has no country (UTC), OK on Tor', () => {
+    const fs = judge({ main: who({ country: 'FR' }), timeZone: 'UTC' });
+    expect(find(fs, 'location')?.verdict).toBe('unknown');
+    expect(find(fs, 'provider')?.verdict).toBe('unknown');
+    expect(find(judge({ main: who({ country: 'FR', tor: true }), timeZone: 'UTC' }), 'location')?.verdict).toBe('ok');
+    expect(find(judge({ main: who({ country: 'FR', privateRelay: true }), timeZone: 'UTC' }), 'provider')?.verdict).toBe('ok');
+  });
+
+  it('"busy" gives one CAN\'T TELL finding saying the server is busy', () => {
+    const fs = judge({ main: 'busy', v4: 'busy', v6: null });
+    expect(fs).toHaveLength(1);
+    expect(fs[0]).toMatchObject({ id: 'publicIp', verdict: 'unknown', value: "leakcheck's server is busy, try again in a minute" });
+  });
+
   it('null fields read "unknown", never null or undefined', () => {
     const blank = who({ ip: '127.0.0.1', country: null, city: null, asn: null, asOrg: null });
     const fs = judge({ main: blank, v4: blank });
@@ -192,8 +234,11 @@ describe('fetchWhoami', () => {
   it('returns "unavailable" on 503', async () => {
     expect(await fetchWhoami('', reply(503, { error: 'data-unavailable' }))).toBe('unavailable');
   });
+  it('returns "busy" on 429', async () => {
+    expect(await fetchWhoami('', reply(429, { error: 'rate-limited' }))).toBe('busy');
+  });
   it('returns null on other errors, a bad body, a network error or a timeout', async () => {
-    expect(await fetchWhoami('', reply(429, { error: 'rate-limited' }))).toBeNull();
+    expect(await fetchWhoami('', reply(500, { error: 'internal' }))).toBeNull();
     expect(await fetchWhoami('', reply(200, { nope: 1 }))).toBeNull();
     expect(await fetchWhoami('', async () => { throw new TypeError('Failed to fetch'); })).toBeNull();
     const started = Date.now();

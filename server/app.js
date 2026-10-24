@@ -30,7 +30,11 @@ export function createApp({ cfg, staticMap, whoami }) {
       res.end();
       return;
     }
-    const pathname = (req.url ?? '/').split('?')[0];
+    const [pathname, query] = (req.url ?? '/').split(/\?(.*)/s);
+    if (/^\/(en|fr|es)$/.test(pathname)) {
+      res.writeHead(301, { location: `${pathname}/${query === undefined ? '' : `?${query}`}`, 'content-length': '0' });
+      return void res.end();
+    }
     if (pathname === '/api/whoami') return whoami(req, res);
     if (pathname === '/api/origins') return origins(req, res);
     const entry = staticMap.get(pathname);
