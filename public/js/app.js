@@ -3,6 +3,8 @@ import { loadStrings, t } from './i18n.js';
 import { collectBrowser, judgeBrowser } from './browser.js';
 import { renderFindings, renderSummary, announce } from './render.js';
 import { state } from './state.js';
+import { fetchWhoami, gatherSrflx, judgeConnection, compareVpnOff, stunUrls } from './connection.js';
+import zoneCountries from './tz-countries.js';
 
 const root = document.documentElement;
 await loadStrings(root.lang);
@@ -21,6 +23,20 @@ for (const el of document.querySelectorAll('[data-i18n-attr]')) {
 }
 root.dataset.i18nReady = root.lang;
 
+/** Leak and OK counts, formatted for the page language. @param {import('./browser.js').Finding[]} findings */
+function counts(findings) {
+  const num = new Intl.NumberFormat(root.lang);
+  const count = (/** @type {string} */ v) => num.format(findings.filter((f) => f.verdict === v).length);
+  return { leak: count('leak'), ok: count('ok') };
+}
+
+/** The summary tiles count every section's findings together. */
+function updateSummary() {
+  renderSummary(/** @type {HTMLElement} */ (document.querySelector('#results .tiles')), [...state.browser, ...state.connection], t);
+  const hint = document.querySelector('#results .hint');
+  if (hint instanceof HTMLElement) hint.hidden = true;
+}
+
 // ---------- browser scan ----------
 const runBtn = /** @type {HTMLButtonElement} */ (document.getElementById('run-scan'));
 let scanning = false;
@@ -35,12 +51,8 @@ async function runScan() {
     const findings = judgeBrowser(await collectBrowser(), t, root.lang);
     state.browser = findings;
     renderFindings(/** @type {HTMLUListElement} */ (document.querySelector('#browser .findings')), findings, t);
-    renderSummary(/** @type {HTMLElement} */ (document.querySelector('#results .tiles')), findings, t);
-    const hint = document.querySelector('#results .hint');
-    if (hint instanceof HTMLElement) hint.hidden = true;
-    const num = new Intl.NumberFormat(root.lang);
-    const count = (/** @type {string} */ v) => num.format(findings.filter((f) => f.verdict === v).length);
-    announce(t('scan.done', { leak: count('leak'), ok: count('ok') }));
+    updateSummary();
+    announce(t('scan.done', counts(findings)));
   } catch {
     announce(t('scan.failed'));
   } finally {
@@ -49,3 +61,87 @@ async function runScan() {
   }
 }
 runBtn.addEventListener('click', runScan);
+
+// ---------- connection check ----------
+const connBtn = /** @type {HTMLButtonElement} */ (document.getElementById('run-connection'));
+const revealBtn = /** @type {HTMLButtonElement} */ (document.getElementById('reveal-ip'));
+const vpnOffBtn = /** @type {HTMLButtonElement} */ (document.getElementById('vpn-off'));
+const vpnOffBox = /** @type {HTMLElement} */ (document.getElementById('vpn-off-box'));
+const vpnOffResult = /** @type {HTMLElement} */ (document.getElementById('vpn-off-result'));
+const tools = /** @type {HTMLElement} */ (document.getElementById('connection-tools'));
+const connList = /** @type {HTMLUListElement} */ (document.querySelector('#connection .findings'));
+let checking = false;
+
+/** Draw the connection rows, masked unless reveal is pressed. */
+function drawConnection() {
+  if (!state.connectionInput) return;
+  const reveal = revealBtn.getAttribute('aria-pressed') === 'true';
+  state.connection = judgeConnection({ ...state.connectionInput, reveal }, t);
+  renderFindings(connList, state.connection, t);
+}
+
+/** The public address from a lookup set: the main one, else either family. */
+function publicIp() {
+  const input = state.connectionInput;
+  if (!input) return null;
+  for (const l of [input.main, input.v4, input.v6]) if (l && l !== 'unavailable') return l;
+  return null;
+}
+
+/** Ask our own server for the address on this origin and on the single-family origins, and run STUN. */
+async function runConnection() {
+  if (checking) return;
+  checking = true;
+  connBtn.setAttribute('aria-disabled', 'true');
+  announce(t('connection.running'));
+  try {
+    const originsRes = await fetch('/api/origins', { credentials: 'omit', cache: 'no-store' }).catch(() => null);
+    /** @type {import('./connection.js').Origins|null} */
+    const origins = originsRes?.ok ? await originsRes.json().catch(() => null) : null;
+    const [main, v4, v6, srflx] = await Promise.all([
+      fetchWhoami(''),
+      origins ? fetchWhoami(origins.v4) : null,
+      origins ? fetchWhoami(origins.v6) : null,
+      origins ? gatherSrflx(stunUrls(origins)).catch(() => null) : null,
+    ]);
+    state.connectionInput = {
+      main, v4, v6, srflx, zoneCountries,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+    drawConnection();
+    const who = publicIp();
+    state.firstIp ??= who?.ip ?? null;
+    tools.hidden = who === null;
+    vpnOffBox.hidden = who === null || who.tor || who.privateRelay;
+    updateSummary();
+    announce(t('connection.done', counts(state.connection)));
+  } catch {
+    announce(t('connection.failed'));
+  } finally {
+    checking = false;
+    connBtn.removeAttribute('aria-disabled');
+  }
+}
+connBtn.addEventListener('click', runConnection);
+
+revealBtn.addEventListener('click', () => {
+  revealBtn.setAttribute('aria-pressed', String(revealBtn.getAttribute('aria-pressed') !== 'true'));
+  drawConnection();
+});
+
+let rechecking = false;
+vpnOffBtn.addEventListener('click', async () => {
+  if (rechecking || !state.firstIp) return;
+  rechecking = true;
+  vpnOffBtn.setAttribute('aria-disabled', 'true');
+  vpnOffResult.textContent = '';
+  try {
+    const after = await fetchWhoami('');
+    vpnOffResult.textContent = after && after !== 'unavailable'
+      ? t(`connection.vpnOff.${compareVpnOff(state.firstIp, after.ip)}`)
+      : t('connection.vpnOff.failed');
+  } finally {
+    rechecking = false;
+    vpnOffBtn.removeAttribute('aria-disabled');
+  }
+});

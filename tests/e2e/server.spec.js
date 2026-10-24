@@ -14,7 +14,7 @@ test('whoami answers from fixtures via the dev override', async ({ request }) =>
 });
 
 test('whoami answers on the IPv6 origin', async ({ request }) => {
-  const res = await request.get('http://[::1]:8080/api/whoami');
+  const res = await request.get('http://ip6-localhost:8080/api/whoami');
   expect(res.status()).toBe(200);
   expect((await res.json()).family).toBe(6);
 });

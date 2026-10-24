@@ -324,6 +324,21 @@ main {
 .panel-col { display: flex; flex-direction: column; gap: 0.375rem; }
 .panel .label { color: var(--soft); font-weight: 700; }
 
+/* Action box: a button with what pressing it does. */
+.action-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  padding: 1.25rem;
+  border: 2px dashed var(--muted);
+}
+.action-box > p { flex: 1 1 20rem; color: var(--soft); }
+.action-box > .vpn-off-result { flex-basis: 100%; color: var(--fg); font-weight: 700; }
+.vpn-off-result:empty { display: none; }
+.action-box[hidden], .actions[hidden] { display: none; }
+.btn-secondary[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+
 /* ---------- footer ---------- */
 
 .site-footer { border-top: 1px solid var(--line); }

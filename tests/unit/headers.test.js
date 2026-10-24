@@ -7,7 +7,7 @@ describe('securityHeaders', () => {
   it('sets the strict header set', () => {
     const h = securityHeaders(loadConfig({}));
     expect(h['content-security-policy']).toBe(
-      "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self' http://127.0.0.1:8080 http://[::1]:8080 http://192.168.1.1 http://192.168.0.1 http://10.0.0.1 http://192.168.1.254; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self' http://127.0.0.1:8080 http://ip6-localhost:8080 http://192.168.1.1 http://192.168.0.1 http://10.0.0.1 http://192.168.1.254; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
     );
     expect(h['x-content-type-options']).toBe('nosniff');
     expect(h['referrer-policy']).toBe('no-referrer');

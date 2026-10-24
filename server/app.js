@@ -11,6 +11,17 @@ import { securityHeaders } from './headers.js';
  */
 export function createApp({ cfg, staticMap, whoami }) {
   const headers = securityHeaders(cfg);
+  // Same origin, no visitor data: the page builds its lookup and STUN addresses from this.
+  const originsBody = JSON.stringify({ v4: cfg.v4Origin, v6: cfg.v6Origin, stunPort: cfg.stunPort });
+  /** @param {import('node:http').IncomingMessage} req @param {import('node:http').ServerResponse} res */
+  const origins = (req, res) => {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { allow: 'GET', 'content-length': '0' });
+      return void res.end();
+    }
+    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(originsBody);
+  };
   return (req, res) => {
     for (const [k, v] of Object.entries(headers)) res.setHeader(k, v);
     if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -21,6 +32,7 @@ export function createApp({ cfg, staticMap, whoami }) {
     }
     const pathname = (req.url ?? '/').split('?')[0];
     if (pathname === '/api/whoami') return whoami(req, res);
+    if (pathname === '/api/origins') return origins(req, res);
     const entry = staticMap.get(pathname);
     if (!entry) {
       res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });

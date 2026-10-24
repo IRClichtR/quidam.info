@@ -5,7 +5,7 @@ import { loadConfig } from '../../server/config.js';
 it('defaults', () => {
   const c = loadConfig({});
   expect(c).toMatchObject({ port: 8080, stunPort: 3478, dev: false, refresh: true,
-    siteOrigin: 'http://localhost:8080', v4Origin: 'http://127.0.0.1:8080', v6Origin: 'http://[::1]:8080' });
+    siteOrigin: 'http://localhost:8080', v4Origin: 'http://127.0.0.1:8080', v6Origin: 'http://ip6-localhost:8080' });
 });
 it('ignores the dev IP override outside development', () => {
   expect(loadConfig({ LEAKCHECK_DEV_CLIENT_IP4: '81.2.69.142' }).devClientIp4).toBeNull();

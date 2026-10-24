@@ -66,7 +66,19 @@
 <h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">your connection</span></h2>
 <p class="block-sub" data-i18n="section.connection.sub">runs only when you click, contacts only leakcheck's own server</p>
 </div>
+<div class="action-box">
+<p data-i18n="connection.intro">Pressing the button sends a few requests to leakcheck's own server and nowhere else. It reads the address your connection comes from and looks it up in its own copy of an IP database. Nothing is stored.</p>
+<button type="button" class="btn" id="run-connection" data-i18n="connection.run">CHECK MY CONNECTION</button>
+</div>
 <ul class="findings"></ul>
+<div class="actions" id="connection-tools" hidden>
+<button type="button" class="btn btn-secondary" id="reveal-ip" aria-pressed="false" data-i18n="connection.reveal">SHOW FULL IP</button>
+</div>
+<div class="action-box" id="vpn-off-box" hidden>
+<p data-i18n="connection.vpnOff.note">Strong VPNs such as Mullvad, Proton or Nym leave no sign a site can see.</p>
+<button type="button" class="btn btn-secondary" id="vpn-off" data-i18n="connection.vpnOff.run">CHECK AGAIN WITH VPN OFF</button>
+<p class="vpn-off-result" id="vpn-off-result" aria-live="polite"></p>
+</div>
 </section>
 
 <section class="block" id="localnet" aria-labelledby="localnet-title">

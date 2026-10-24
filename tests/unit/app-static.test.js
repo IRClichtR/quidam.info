@@ -94,6 +94,18 @@ describe('static serving', () => {
     expect((await raw('GET', '/api/whoami?x=1')).body).toBe('{}');
   });
 
+  it('serves /api/origins from the config, uncached, GET only', async () => {
+    const r = await raw('GET', '/api/origins?x=1');
+    expect(r.status).toBe(200);
+    expect(r.headers['content-type']).toBe('application/json; charset=utf-8');
+    expect(r.headers['cache-control']).toBe('no-store');
+    expect(r.headers['content-security-policy']).toBeTruthy();
+    expect(JSON.parse(r.body)).toEqual({ v4: 'http://127.0.0.1:8080', v6: 'http://ip6-localhost:8080', stunPort: 3478 });
+    const head = await raw('HEAD', '/api/origins');
+    expect(head.status).toBe(405);
+    expect(head.headers.allow).toBe('GET');
+  });
+
   it('survives a client disconnecting mid-download', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lc-'));
     fs.writeFileSync(path.join(dir, 'big.txt'), Buffer.alloc(8 * 1024 * 1024, 'a'));

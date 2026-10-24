@@ -48,7 +48,7 @@ export function loadConfig(env) {
     devClientIp6: devIp(env.LEAKCHECK_DEV_CLIENT_IP6, isIPv6, 'LEAKCHECK_DEV_CLIENT_IP6', dev),
     siteOrigin: env.SITE_ORIGIN ?? `http://localhost:${httpPort}`,
     v4Origin: env.V4_ORIGIN ?? `http://127.0.0.1:${httpPort}`,
-    v6Origin: env.V6_ORIGIN ?? `http://[::1]:${httpPort}`,
+    v6Origin: env.V6_ORIGIN ?? `http://ip6-localhost:${httpPort}`,
     dataDir: env.LEAKCHECK_DATA_DIR ?? 'data',
     refresh: env.LEAKCHECK_REFRESH !== '0',
   };
