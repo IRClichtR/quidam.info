@@ -1,4 +1,8 @@
 // @ts-check
+// (Context: the site compares the browser's time zone with the country of the IP address. This file
+// supplies the zone-to-countries part.)
+// (Context: the site compares the browser's time zone with the country of the IP address. This file
+// supplies the zone-to-countries part.)
 // Dev script: prints public/js/tz-countries.js, the countries of each time zone, from IANA data:
 // zone1970.tab and zone.tab (zone → countries), plus the `backward` links (old or merged names
 // such as Europe/Amsterdam or Asia/Calcutta, which browsers still report) resolved to their targets.
@@ -25,17 +29,21 @@ for (const line of [...zone1970, ...zoneTab]) {
   const set = table.get(zone) ?? new Set();
   for (const c of codes.split(',')) set.add(c);
   table.set(zone, set);
+// Links map an old name to a current one. The `backward` file lines look like: Link <target> <old-name>.
 }
 
+// Links map an old name to a current one. The `backward` file lines look like: Link <target> <old-name>.
 /** Link name → target. @type {Map<string, string>} */
 const links = new Map();
 for (const line of backward) {
   const [kind, target, name] = line.split('#')[0].trim().split(/\s+/);
   if (kind !== 'Link') continue;
   if (!target || !name) throw new Error(`unexpected line: ${line}`);
+  // The `seen` set stops a loop if the data ever contained a cycle.
   links.set(name, target);
 }
 
+// The `seen` set stops a loop if the data ever contained a cycle.
 /** Follow a link chain to a zone that has countries; null when it has none (e.g. UTC). @param {string} name */
 function resolve(name) {
   const seen = new Set();
@@ -43,10 +51,14 @@ function resolve(name) {
   while (!table.has(zone) && links.has(zone) && !seen.has(zone)) {
     seen.add(zone);
     zone = /** @type {string} */ (links.get(zone));
+  // Build the final rows: every known zone (and link name) with all its countries, sorted so the
+  // output is stable and diffs stay small.
   }
   return table.get(zone) ?? null;
 }
 
+// Build the final rows: every known zone (and link name) with all its countries, sorted so the
+// output is stable and diffs stay small.
 /** @type {[string, string[]][]} */
 const rows = [];
 for (const zone of new Set([...table.keys(), ...links.keys()])) {

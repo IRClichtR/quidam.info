@@ -1,4 +1,15 @@
 /* leakcheck: one stylesheet. Tokens follow the system theme; no inline styles (CSP). */
+/*
+ * Layout: theme tokens, fonts, base styles, then components (header, buttons, tags, summary,
+ * finding rows, fix plan, footer).
+ * Colours are tokens (custom properties), never hard-coded in rules. Each theme is checked once,
+ * so every text/background pair keeps AAA contrast (7:1), including text on the panel colour.
+ * That is why some rules say "only fg and soft on panel". Verdicts also use an icon and a word,
+ * so colour is never the only signal.
+ */
+
+/* ---------- theme tokens: dark (default) ---------- */
+/* --red marks a leak, --safe marks OK, --muted is for quiet text, --line for borders. */
 
 :root {
   --bg: #121212;
@@ -13,6 +24,8 @@
   color-scheme: dark;
 }
 
+/* ---------- theme tokens: light ---------- */
+/* Same names, different values, so no component rule needs to know the theme. */
 @media (prefers-color-scheme: light) {
   :root {
     --bg: #FAFAFA;
@@ -28,6 +41,8 @@
   }
 }
 
+/* ---------- fonts ---------- */
+/* Self-hosted (no third-party font requests). font-display: swap shows text at once, then swaps. */
 @font-face {
   font-family: 'VCR OSD Mono';
   src: url('../fonts/VCR_OSD_MONO.ttf') format('truetype');
@@ -93,6 +108,7 @@ h1, h2,
   padding-inline: clamp(1rem, 4vw, 3rem);
 }
 
+/* Text for screen readers only: clipped, not display:none, so it is still announced. */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -212,6 +228,7 @@ main {
 .btn[aria-disabled="true"] { cursor: progress; }
 
 /* ---------- tags ---------- */
+/* Verdict badges: leak is filled red, OK and can't-tell are outlined. */
 
 .tag {
   flex: none;
@@ -241,6 +258,7 @@ main {
   color: var(--muted);
 }
 .hint { color: var(--soft); }
+/* The 1px grid gap shows the --line background as thin dividers between tiles. */
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
@@ -282,6 +300,7 @@ main {
 .block-sub { color: var(--muted); font-size: 0.9375rem; }
 
 /* Finding rows (filled by later tasks). */
+/* Each row: label button, value, verdict tag; a hidden panel explains why and how to fix. */
 .findings { list-style: none; padding: 0; display: flex; flex-direction: column; }
 .findings > li {
   display: flex;
@@ -340,6 +359,7 @@ main {
 .btn-secondary[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
 
 /* ---------- fix plan ---------- */
+/* Fix cards: tick box, a 3-block meter for how much it hides, tags that link to findings. */
 
 .block[hidden] { display: none; }
 .findings > li:focus, #fix-title:focus { outline: 3px solid var(--fg); outline-offset: 3px; }

@@ -1,12 +1,22 @@
 // @ts-check
+
+// Reads settings from environment variables, checks them, and returns one plain object.
+// Everything else gets its settings from here, so a bad value stops the server at startup.
+
+// Reads settings from environment variables, checks them, and returns one plain object.
+// Everything else gets its settings from here, so a bad value stops the server at startup.
 import { isIPv4, isIPv6 } from 'node:net';
 
 /**
  * @typedef {{ port: number, stunPort: number, dev: boolean, devClientIp4: string|null,
  *   devClientIp6: string|null, siteOrigin: string, v4Origin: string, v6Origin: string,
+ // The override lets a developer on localhost pretend to have a public IP. It is
+ // switched off outside development, so a visitor can never choose their own IP.
  *   dataDir: string, refresh: boolean }} Config
  */
 
+// The override lets a developer on localhost pretend to have a public IP. It is
+// switched off outside development, so a visitor can never choose their own IP.
 /**
  * Read the dev-only IP override; it is ignored unless running in development.
  * @param {string|undefined} value
@@ -32,11 +42,17 @@ function port(value, fallback, name) {
   if (!Number.isInteger(n) || n < 0 || n > 65535) throw new Error(`${name} must be an integer 0-65535: ${value}`);
   return n;
 }
+// Defaults suit local development. In production, set SITE_ORIGIN and the two
+// origins. The v4/v6 origins are two hostnames that resolve to only IPv4 or only IPv6,
+// so the page can learn both of the visitor's addresses.
 
 /**
  * @param {Record<string, string|undefined>} env
  * @returns {Config}
  */
+// Defaults suit local development. In production, set SITE_ORIGIN and the two
+// origins. The v4/v6 origins are two hostnames that resolve to only IPv4 or only IPv6,
+// so the page can learn both of the visitor's addresses.
 export function loadConfig(env) {
   const httpPort = port(env.PORT, 8080, 'PORT');
   const dev = env.NODE_ENV === 'development';

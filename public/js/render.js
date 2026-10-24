@@ -1,5 +1,8 @@
 // @ts-check
 // DOM rendering for findings and the summary. Text goes in through textContent only (CSP, no innerHTML).
+// Turns findings into page elements. Text always goes in through textContent, never innerHTML,
+// so a hostile value (say, a strange GPU name) can never inject markup. The page's CSP
+// (Content Security Policy) forbids inline scripts and styles anyway.
 import { uniqueness } from './browser.js';
 
 /** @typedef {import('./browser.js').Finding} Finding */
@@ -7,6 +10,8 @@ import { uniqueness } from './browser.js';
 /** @typedef {import('./browser.js').T} T */
 
 const SVG = 'http://www.w3.org/2000/svg';
+// Each verdict has its own shape, not only a colour, so it is readable without seeing colour:
+// cross = leak, tick = OK, question mark = can't tell.
 /** Icon paths on a 16 × 16 grid. */
 const ICONS = {
   leak: ['M3.5 3.5l9 9M12.5 3.5l-9 9'],
@@ -59,6 +64,7 @@ function tag(verdict, t) {
   return node;
 }
 
+// Counter that makes every panel id unique, even after a rescan redraws the rows.
 let panelSeq = 0;
 
 /**
@@ -85,6 +91,8 @@ export function renderFindings(listEl, findings, t) {
       panel.append(col);
     }
 
+    // The label is a real button with aria-expanded/aria-controls, so keyboard and
+    // screen reader users can open the 'why' and 'fix' panel.
     const toggle = /** @type {HTMLButtonElement} */ (el('button', 'row-label row-toggle'));
     toggle.type = 'button';
     toggle.setAttribute('aria-expanded', 'false');
@@ -113,6 +121,7 @@ export function renderFindings(listEl, findings, t) {
  * @param {boolean} [scanned] whether the browser scan has run
  */
 export function renderSummary(tilesEl, findings, t, scanned = true) {
+  // Intl.NumberFormat writes numbers the way the page language does.
   const num = new Intl.NumberFormat(document.documentElement.lang || 'en');
   /** @param {'leak'|'ok'} kind */
   const countTile = (kind) => {
@@ -123,10 +132,12 @@ export function renderSummary(tilesEl, findings, t, scanned = true) {
     return tile;
   };
   const unique = el('div', 'tile');
+  // Uniqueness is only meaningful once the browser scan ran, so before that it reads 'not scanned yet'.
   unique.append(el('div', 'tile-num tile-word', t(`summary.unique.${scanned ? uniqueness(findings) : 'none'}`)), el('p', 'tile-text', t('summary.unique.sub')));
   tilesEl.replaceChildren(countTile('leak'), countTile('ok'), unique);
 }
 
+// The live region (aria-live) makes screen readers speak status changes without moving focus.
 /** Say `text` to screen readers through the page's live region. @param {string} text */
 export function announce(text) {
   const region = document.getElementById('announce');

@@ -1,5 +1,8 @@
 // @ts-check
 // The fix plan: the v1 fixes, their order for each threat, the detected browser, and the cards.
+// Fix plan logic: the list of fixes, which come first for each threat, which browser the
+// visitor uses (so the steps match), and the DOM cards. A tier says how much effort a fix takes
+// (quick, this week, strong). Ticks and progress live in app.js memory only.
 import { el, icon } from './render.js';
 
 /** @typedef {import('./browser.js').FindingId} FindingId */
@@ -15,6 +18,8 @@ import { el, icon } from './render.js';
 /** @type {BrowserName[]} */
 export const BROWSERS = ['chrome', 'firefox', 'safari', 'edge', 'brave', 'other'];
 
+// 'hides' is how much of the leaks a fix covers (1 to 3). Each tag links back to the finding it
+// addresses (or null when no finding measures it, such as cookies).
 /** The spec's v1 fixes, in default order. @type {Fix[]} */
 export const FIXES = [
   { id: 'block', tier: 'quick', hides: 2, minutes: 2, tags: [{ label: 'trackers', finding: null }, { label: 'fingerprintScripts', finding: 'canvas' }] },
@@ -32,9 +37,12 @@ export const FIXES = [
   { id: 'tor', tier: 'strong', hides: 3, minutes: 10, tags: [{ label: 'ip', finding: 'publicIp' }, { label: 'fingerprint', finding: 'canvas' }, { label: 'dns', finding: null }] },
 ];
 
+// Ordering by threat: what the visitor fears (ads, a snooping network, a targeted adversary)
+// chooses which two fixes jump to the top. Everything else keeps its default order after them.
 /** @type {Record<Threat, FixId[]>} */
 const PROMOTED = { ads: ['block', 'browser'], network: ['dns', 'ip'], targeted: ['tor', 'ip'] };
 
+// A stable reorder: no sorting scores, just 'promoted first, rest unchanged'.
 /**
  * The fixes for a threat: its promoted fixes first, then the rest in default order. No threat keeps the default order.
  * @param {Threat|null} threat
@@ -46,6 +54,8 @@ export function orderFixes(threat) {
   return [...first.map(byId), ...FIXES.filter((f) => !first.includes(f.id))];
 }
 
+// Order matters: many browsers say 'Chrome' in their user agent, so the more specific
+// names are tested before the general ones. Safari's user agent has 'Safari' but not 'Chrome'.
 /**
  * Which browser's steps to show. Brave sends Chrome's user agent but exposes `navigator.brave`;
  * Edge adds `Edg/`. Other Chromium browsers (Opera, Samsung, Vivaldi) get the generic steps.
@@ -81,6 +91,8 @@ function tagItem(tag, t) {
   const id = tag.finding;
   const a = /** @type {HTMLAnchorElement} */ (el('a', 'fix-tag', text));
   a.href = `#finding-${id}`;
+  // Move focus ourselves: the finding row may not exist yet. If the check was never run,
+  // focus its button instead, which is what makes the row appear.
   a.addEventListener('click', (e) => {
     e.preventDefault();
     const target = document.getElementById(`finding-${id}`) ?? document.getElementById(CONNECTION.includes(id) ? 'run-connection' : 'run-scan');
@@ -90,6 +102,7 @@ function tagItem(tag, t) {
   return li;
 }
 
+// Not colour alone: the number of filled blocks shows the level, and aria-label says it in words.
 /**
  * Three blocks, filled or outlined, named for screen readers.
  * @param {1|2|3} hides
@@ -123,6 +136,7 @@ function metaRow(key, value, text) {
 
 let seq = 0;
 
+// Built once for all fixes; the order is changed later by moving these same nodes.
 /**
  * One card per fix, keyed by id, so a reorder moves the same nodes (ticks and open panels stay).
  * @param {{t: T, tList: (key: string) => string[], browser: BrowserName, lang: string, onToggle: (id: FixId, done: boolean) => void}} opts
@@ -133,6 +147,7 @@ export function buildFixCards({ t, tList, browser, lang, onToggle }) {
   /** @type {Map<FixId, HTMLLIElement>} */
   const cards = new Map();
   for (const fix of FIXES) {
+    // Unique suffix for ids, so aria-labelledby never points to the wrong card.
     const n = ++seq;
     const li = /** @type {HTMLLIElement} */ (el('li', 'fix-card'));
     li.dataset.fix = fix.id;
@@ -190,6 +205,7 @@ export function buildFixCards({ t, tList, browser, lang, onToggle }) {
   return cards;
 }
 
+// Compare leak counts to show progress. With no earlier scan there is nothing to compare.
 /**
  * The rescan result: leak counts before and after, or only after when there was nothing to compare with.
  * @param {T} t

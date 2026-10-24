@@ -1,4 +1,8 @@
 // @ts-check
+// The page controller. It wires buttons to the other modules: scan the browser, check the
+// connection, probe the local network, then show the fix plan and rescan.
+// Everything is click-gated and kept in memory (state.js, plus a Set of ticked fixes):
+// there is no storage, no cookie, no analytics, so closing the tab erases it all.
 import { loadStrings, t, tList } from './i18n.js';
 import { collectBrowser, judgeBrowser } from './browser.js';
 import { renderFindings, renderSummary, announce, el } from './render.js';
@@ -9,6 +13,8 @@ import zoneCountries from './tz-countries.js';
 import { FIXES, orderFixes, detectBrowser, buildFixCards, rescanText } from './fixes.js';
 
 const root = document.documentElement;
+// Top-level await: the page text must be loaded before anything is drawn.
+// The language comes from the <html lang> of each translated page.
 await loadStrings(root.lang);
 
 // data-i18n="key" sets the text; placeholders come from the element's other data-* attributes.
@@ -35,12 +41,15 @@ function counts(findings) {
 /** The summary tiles count every section's findings together. */
 function updateSummary() {
   renderSummary(/** @type {HTMLElement} */ (document.querySelector('#results .tiles')), [...state.browser, ...state.connection, ...state.localnet], t, state.browser.length > 0);
+  // Once there are results, the 'run a scan' hint is no longer needed.
   const hint = document.querySelector('#results .hint');
   if (hint instanceof HTMLElement) hint.hidden = true;
 }
 
 // ---------- browser scan ----------
 const runBtn = /** @type {HTMLButtonElement} */ (document.getElementById('run-scan'));
+// Each check has a busy flag, so a double click cannot start two runs. We use aria-disabled
+// (not `disabled`) so the button stays focusable for keyboard users.
 let scanning = false;
 
 /** Run the browser tests and show them. A click during a scan is ignored. */
@@ -50,6 +59,7 @@ async function runScan() {
   runBtn.setAttribute('aria-disabled', 'true');
   announce(t('scan.running'));
   try {
+    // collect (read the browser), judge (decide verdicts), render (draw), then announce for screen readers.
     const findings = judgeBrowser(await collectBrowser(), t, root.lang);
     state.browser = findings;
     renderFindings(/** @type {HTMLUListElement} */ (document.querySelector('#browser .findings')), findings, t);
@@ -92,24 +102,30 @@ async function runConnection() {
   vpnOffResult.textContent = '';
   announce(t('connection.running'));
   try {
+    // /api/origins gives the IPv4-only and IPv6-only hostnames and the STUN port.
     const originsRes = await fetch('/api/origins', { credentials: 'omit', cache: 'no-store' }).catch(() => null);
     /** @type {import('./connection.js').Origins|null} */
     const origins = originsRes?.ok ? await originsRes.json().catch(() => null) : null;
     state.origins = origins;
+    // All lookups run together. The v4/v6 lookups use single-family hostnames so we know the
+    // address for each family; STUN asks which public addresses WebRTC exposes.
     const [main, v4, v6, srflx] = await Promise.all([
       fetchWhoami(''),
       origins ? fetchWhoami(origins.v4) : null,
       origins ? fetchWhoami(origins.v6) : null,
       origins ? gatherSrflx(stunUrls(origins)).catch(() => null) : null,
     ]);
+    // Kept so 'reveal' can redraw the same findings without asking the network again.
     state.connectionInput = {
       main, v4, v6, srflx, zoneCountries,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
     drawConnection();
     const who = primaryLookup(main, v4, v6);
+    // `??=` keeps the very first address seen, to compare with after the visitor turns the VPN off.
     if (who) state.first ??= { ip: who.ip, family: who.family };
     tools.hidden = who === null;
+    // The VPN-off check makes no sense for Tor or Private Relay, which hide the address on purpose.
     vpnOffBox.hidden = who === null || who.tor || who.privateRelay;
     updateSummary();
     announce(t('connection.done', counts(state.connection)));
@@ -122,6 +138,7 @@ async function runConnection() {
 }
 connBtn.addEventListener('click', runConnection);
 
+// Reveal toggles masking of the IP; judging runs again from the saved input.
 revealBtn.addEventListener('click', () => {
   revealBtn.setAttribute('aria-pressed', String(revealBtn.getAttribute('aria-pressed') !== 'true'));
   drawConnection();
@@ -164,6 +181,8 @@ async function runLocalnet() {
   localBtn.setAttribute('aria-disabled', 'true');
   announce(t('localnet.running'));
   try {
+    // Ask the permission state first: if the browser will show a prompt, the probe waits
+    // 30 s for the visitor instead of 3 s.
     const permission = await permissionState();
     const router = await probeRouters(fetch, performance.now.bind(performance), probeTimeout(permission));
     state.localnet = judgeLocalnet({ router, promptSupported: permission !== null }, t);
@@ -197,6 +216,7 @@ function drawProgress() {
   progressBar.replaceChildren(...FIXES.map((_, i) => el('span', i < done.size ? 'bar-cell is-done' : 'bar-cell')));
 }
 
+// Cards are built once; changing the threat only reorders them.
 const cards = buildFixCards({
   t, tList, lang: root.lang,
   browser: detectBrowser(/** @type {{userAgent: string, brave?: unknown}} */ (navigator)),
@@ -233,10 +253,12 @@ rescanBtn.addEventListener('click', async () => {
   rescanBtn.setAttribute('aria-disabled', 'true');
   rescanResult.textContent = '';
   vpnOffResult.textContent = '';
+  // The 'before' count is taken now, before the rescan replaces the findings.
   const before = state.browser.length ? leaking() : null;
   try {
     announce(t('fix.rescan.running'));
     await runScan();
+    // Only rerun what the visitor already chose to run. We never start a network check for them.
     if (state.ran.connection) await runConnection();
     if (state.ran.localnet) await runLocalnet();
     const num = new Intl.NumberFormat(root.lang);

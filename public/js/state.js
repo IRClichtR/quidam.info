@@ -1,6 +1,8 @@
 // @ts-check
 // The latest results, held in memory only for this tab. Later sections add their own findings.
 
+// Nothing here is ever written to disk, cookies or localStorage. A reload starts clean.
+// The fix plan reads these arrays to count leaks and to rescan.
 /**
  * `connectionInput` is what the connection findings were judged from, kept so reveal can redraw them.
  * `first` is the first public address seen, with its family, for the VPN-off recheck;

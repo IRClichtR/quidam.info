@@ -1,4 +1,6 @@
 // @ts-check
+// Language helpers. The root page (`/`) picks English, French or Spanish from the browser's
+// preferred languages and redirects. Everything runs locally; no request reveals the choice.
 /** @typedef {'en'|'fr'|'es'} Lang */
 
 /** @type {readonly Lang[]} */
@@ -11,6 +13,7 @@ export const LANGS = ['en', 'fr', 'es'];
  */
 export function pickLanguage(prefs) {
   for (const pref of prefs) {
+    // Keep only the base language: 'fr-CA' counts as 'fr'.
     const code = /** @type {Lang} */ (pref.toLowerCase().split('-')[0]);
     if (LANGS.includes(code)) return code;
   }
