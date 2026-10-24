@@ -4,7 +4,7 @@ leakcheck is a privacy-check website. One visit shows what a site can learn abou
 
 ## Requirements
 
-- Node >= 24 (`engines` in `package.json`). Development so far ran on Node 22.17 without using Node 24-only APIs.
+- Node >= 24 (`engines` in `package.json`). Tested on Node 24.22.1.
 - Tested on Linux (Ubuntu).
 
 ## Setup
