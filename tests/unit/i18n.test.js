@@ -1,5 +1,6 @@
 // @ts-check
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import en from '../../public/js/i18n/en.js';
 import fr from '../../public/js/i18n/fr.js';
 import es from '../../public/js/i18n/es.js';
@@ -33,10 +34,22 @@ describe('string files', () => {
   });
   it('keep every placeholder', () => {
     const names = (/** @type {string} */ v) => (v.match(/\{\w+\}/g) ?? []).sort().join();
-    const base = new Map(leaves(en));
     for (const strings of [fr, es]) {
-      for (const [k, v] of leaves(strings)) expect(names(v), k).toBe(names(/** @type {string} */ (base.get(k))));
+      for (const [key, value] of Object.entries(strings)) {
+        const list = [value].flat();
+        const base = [en[key]].flat();
+        // A step list of another length would compare the wrong items.
+        expect(list.length, `${key}: ${list.length} items, English has ${base.length}`).toBe(base.length);
+        list.forEach((v, i) => expect(names(v), `${key}#${i}`).toBe(names(base[i])));
+      }
     }
+  });
+  it('fr puts a no-break space (U+00A0) before ? : ; !', () => {
+    for (const [k, v] of leaves(fr)) expect(v, k).not.toMatch(/[^\u00a0][?:;!](?=\s|$)/);
+    const html = readFileSync(new URL('../../public/fr/index.html', import.meta.url), 'utf8');
+    const text = [...html.matchAll(/>([^<]+)</g), ...html.matchAll(/ (?:content|aria-label|title|alt)="([^"]+)"/g)].map((m) => m[1]);
+    const ENTITIES = /** @type {Record<string, string>} */ ({ nbsp: '\u00a0', gt: '>', lt: '<', amp: '&', quot: '"' });
+    for (const v of text) expect(v.replace(/&(\w+);/g, (m, e) => ENTITIES[e] ?? m)).not.toMatch(/[^\u00a0][?:;!](?=\s|$)/);
   });
   it('every fix has steps for every browser in every language', () => {
     for (const strings of [en, fr, es]) {

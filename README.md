@@ -5,7 +5,7 @@ leakcheck is a privacy-check website. One visit shows what a site can learn abou
 ## Requirements
 
 - Node >= 24 (`engines` in `package.json`). Development so far ran on Node 22.17 without using Node 24-only APIs.
-- Linux or macOS.
+- Tested on Linux (Ubuntu).
 
 ## Setup
 
@@ -24,7 +24,13 @@ VCR OSD Mono is git-ignored because its licence is unknown (see [the launch chec
 npm start
 ```
 
-Open <http://localhost:8080/>. On first start the server downloads DB-IP Lite (city and ASN), the Tor exit list and the Private Relay ranges into `data/`. Set `LEAKCHECK_REFRESH=0` to stay offline and use what is already in `data/`.
+Open <http://localhost:8080/>. On first start the server downloads four data files into `data/`:
+
+- `dbip-city-lite.mmdb` and `dbip-asn-lite.mmdb` (DB-IP Lite, refreshed weekly),
+- `tor-exits.txt` (Tor exit list, hourly),
+- `relay-ranges.csv` (iCloud Private Relay ranges, daily).
+
+On a restart it downloads only the files that are missing or older than their interval. Until all four exist (for example on a first start with no internet), the pages still load but `/api/whoami` answers `503 {"error":"data-unavailable"}` and the connection check says the lookup is unavailable. Set `LEAKCHECK_REFRESH=0` to stay offline and use what is already in `data/`.
 
 ## Configuration
 
@@ -51,9 +57,11 @@ npm run check   # type check (tsc --noEmit)
 npm run e2e     # Playwright in chromium, firefox and webkit
 ```
 
+WebKit needs system libraries: run `sudo npx playwright install-deps` once. Without them, run `npm run e2e -- --project=chromium --project=firefox`.
+
 ## Manual LAN check
 
-To try it from a phone on the same Wi-Fi, run `NODE_ENV=development npm start` and open `http://<this machine's LAN IP>:8080/en/` on the phone. Over plain http on a LAN IP `crypto.subtle` is unavailable, so the canvas and audio rows read CAN'T TELL. Remaining manual checks are in [docs/review-before-launch.md](docs/review-before-launch.md).
+To try it from a phone on the same Wi-Fi, run `NODE_ENV=development npm start` and open `http://<this machine's LAN IP>:8080/en/` on the phone. Over plain http on a LAN IP `crypto.subtle` is unavailable, so the canvas and audio rows read CAN'T TELL. The IPv4 and IPv6 VPN rows only appear if the phone can reach the single-family origins: the defaults (`127.0.0.1`, `ip6-localhost`) point at the phone itself, so set `SITE_ORIGIN`, `V4_ORIGIN` and `V6_ORIGIN` to names or addresses the phone can reach. `SITE_ORIGIN` must be the address you open on the phone (for example `http://192.168.1.20:8080`, it is also the CORS origin), `V4_ORIGIN` a name that resolves to this machine over IPv4 only, and `V6_ORIGIN` one that resolves to it over IPv6 only. Otherwise those rows don't appear. Remaining manual checks are in [docs/review-before-launch.md](docs/review-before-launch.md).
 
 ## Privacy
 

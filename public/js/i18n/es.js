@@ -232,7 +232,7 @@ export default {
     'Fíjalo desde el menú de extensiones, para poder desactivarlo en un sitio que deje de funcionar.',
   ],
   'fix.block.steps.brave': [
-    'Brave Shields ya bloquea los rastreadores. Haz clic en el icono del león en la barra de direcciones para comprobar que están activados.',
+    'Los Brave Shields ya bloquean los rastreadores. Haz clic en el icono del león en la barra de direcciones para comprobar que los Shields están activados.',
     'En Configuración, luego Shields, pon el bloqueo de rastreadores y anuncios en Agresivo.',
     'Desactiva los Shields solo en un sitio que deje de funcionar.',
   ],
@@ -284,7 +284,7 @@ export default {
   ],
   'fix.perms.steps.firefox': [
     'Abre Ajustes, luego Privacidad & Seguridad, y baja hasta Permisos.',
-    'Haz clic en Configuración junto a Ubicación y quita los sitios que ya no necesites.',
+    'Haz clic en Ajustes junto a Ubicación y quita los sitios que ya no necesites.',
     'Haz lo mismo con Cámara y Micrófono.',
   ],
   'fix.perms.steps.safari': [
@@ -415,7 +415,7 @@ export default {
     'Borra a menudo las cookies del anónimo, o úsalo en ventanas privadas.',
   ],
   'fix.tor.title': 'Usar Tor Browser',
-  'fix.tor.why': 'Envía el tráfico a través de tres relés y hace que todos los usuarios parezcan idénticos. La protección más fuerte al alcance de cualquiera.',
+  'fix.tor.why': 'Envía el tráfico a través de tres repetidores y hace que todos los usuarios parezcan idénticos. La protección más fuerte al alcance de cualquiera.',
   'fix.tor.tradeoff': 'Las páginas cargan más despacio, algunos sitios bloquean Tor o muestran captchas, y entrar en tus propias cuentas vuelve a identificarte.',
   'fix.tor.steps.chrome': [
     'Descarga Tor Browser solo desde torproject.org.',

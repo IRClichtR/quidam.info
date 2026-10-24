@@ -22,7 +22,7 @@ vocabulary: "un Mac", "Añadir"). Decide whether Latin American variants are nee
 - [ ] Fix plan chrome: CTA, threat question, progress, rescan, note, tiers, meters, tags (`fix.cta` … `fix.tradeoff.label`)
 - [ ] Fix cards: title, why, trade-off, and steps for each browser, for `block`, `dns`, `perms`, `browser`, `ip`, `split`, `tor`
 - [ ] Button labels are short enough and still natural: LANCER L'ANALYSE, VÉRIFIER MA CONNEXION, AFFICHER L'IP COMPLÈTE, REVÉRIFIER VPN COUPÉ, SONDER MON RÉSEAU, VOIR MES CORRECTIFS, RELANCER POUR VÉRIFIER
-- [ ] Typography is consistent: plain spaces before `: ; ? !` (no U+202F), « » used only in `fix.perms.title`
+- [ ] Typography is consistent: a no-break space (U+00A0, not the narrow U+202F) before `: ; ? !` in `fr.js` values and in the static text of `public/fr/index.html` (a unit test enforces it), « » used only in `fix.perms.title`
 
 ### Spanish (`es.js`, `public/es/index.html`)
 - [ ] Page `<title>` and `<meta name="description">`
@@ -58,7 +58,7 @@ Menu names to confirm:
 - [ ] Chrome fr: Paramètres > Confidentialité et sécurité > Sécurité > Utiliser un DNS sécurisé; Paramètres des sites > Position (?), Caméra, Micro (?); Ajouter à Chrome; menu Extensions, épingler; profile menu Ajouter (?); "navigation privée" for Incognito.
 - [ ] Chrome es: Configuración > Privacidad y seguridad > Seguridad > Usar DNS seguro; Configuración de sitios > Ubicación, Cámara, Micrófono; Añadir a Chrome (es-ES) or Agregar a Chrome (es-419) (?); Fijar (?); profile menu Añadir (?); "modo incógnito".
 - [ ] Firefox fr: Paramètres > Vie privée et sécurité; DNS via HTTPS, Protection accrue, Protection maximale (?); Protection renforcée contre le pistage > Stricte, Standard; Permissions > Localisation > Paramètres…; Ajouter à Firefox.
-- [ ] Firefox es: Ajustes (es-ES) or Configuración (es-MX/es-AR) (?); Privacidad & Seguridad; DNS sobre HTTPS, Protección aumentada, Protección máxima (?); Protección mejorada contra rastreo > Estricta, Estándar; Permisos > Ubicación > Configuración… (?); Agregar a Firefox (?).
+- [ ] Firefox es: Ajustes (es-ES) or Configuración (es-MX/es-AR) (?); Privacidad & Seguridad; DNS sobre HTTPS, Protección aumentada, Protección máxima (?); Protección mejorada contra rastreo > Estricta, Estándar; Permisos > Ubicación > Ajustes… (the steps now say Ajustes throughout) (?); Agregar a Firefox (?).
 - [ ] Safari fr: Safari > Réglages > Extensions, Sites web > Localisation, "Lors de la consultation d'autres sites web" > Demander, Caméra, Micro; Avancées (?) > Toute la navigation (?); Profils > Nouveau profil; iOS Réglages > Apps > Safari; Réglages > [nom] > iCloud > Relais privé.
 - [ ] Safari es: Safari > Ajustes > Extensiones, Sitios web > Ubicación, "Al visitar otros sitios web" > Preguntar, Cámara, Micrófono; Avanzado (?) > En toda la navegación (?); Perfiles > Nuevo perfil; iOS Ajustes > Apps > Safari; Ajustes > [nombre] > iCloud > Relay privado (?).
 - [ ] Safari 26 Advanced Fingerprinting Protection: the wording of the setting in fr and es ("protection avancée contre le suivi et les empreintes", "protección avanzada contra la toma de huellas digitales") (?).
@@ -106,6 +106,7 @@ Menu names to confirm:
 - [ ] Write the privacy notice in English, French and Spanish during the hosting step.
 - [ ] Write the French legal notice (mentions légales: publisher, host, contact) during the hosting step.
 - [ ] Link both from the footer of every language page.
+- [ ] Choose the repository licence (package.json says ISC by default).
 
 ## I. Manual checks still to do
 

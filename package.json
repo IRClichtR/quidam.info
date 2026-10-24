@@ -1,8 +1,7 @@
 {
   "name": "leak_checker",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Privacy-check website: what your browser, connection and local network reveal to every site, with a fix plan",
   "directories": {
     "doc": "docs"
   },
