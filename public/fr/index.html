@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>leakcheck&nbsp;: que dit votre appareil à chaque site web&nbsp;?</title>
-<meta name="description" content="Voyez, en direct, ce que votre navigateur et votre connexion révèlent à chaque site web, puis obtenez un plan classé pour le réduire. Tout se passe dans votre navigateur&nbsp;; rien n'est conservé.">
+<meta name="description" content="Voyez, en direct, ce que votre navigateur et votre connexion révèlent à chaque site web, réduisez votre exposition en suivant un plan personnalisé. Tout se passe dans votre navigateur&nbsp;; rien n'est conservé.">
 <link rel="alternate" hreflang="en" href="/en/">
 <link rel="alternate" hreflang="fr" href="/fr/">
 <link rel="alternate" hreflang="es" href="/es/">
@@ -20,7 +20,7 @@
 <div class="brand pixel">leakcheck<span class="brand-cursor" aria-hidden="true">_</span></div>
 <nav class="nav" aria-label="Sections" data-i18n-attr="aria-label:nav.sections">
 <a href="#browser" data-i18n="nav.browser">navigateur</a>
-<a href="#connection" data-i18n="nav.connection">connexion</a>
+<a href="#connection" data-i18n="nav.connection">mon ip</a>
 <a href="#localnet" data-i18n="nav.localnet">réseau local</a>
 <a href="#fix-cta" data-i18n="nav.fix">corriger</a>
 </nav>
@@ -42,9 +42,6 @@
 <p class="hero-prompt" data-i18n="hero.prompt">$ leakcheck --scan --local-only</p>
 <h1 id="hero-title"><span data-i18n="hero.title">que dit votre appareil à chaque site web&nbsp;?</span><span class="cursor" aria-hidden="true"></span></h1>
 <p class="lead" data-i18n="hero.lead">Les tests s'exécutent dans votre navigateur. Les résultats ne quittent jamais cet onglet, et rien n'est conservé quand vous le fermez.</p>
-<div class="actions">
-<button type="button" class="btn" id="run-scan" data-i18n="scan.run">LANCER L'ANALYSE</button>
-</div>
 </section>
 
 <section class="summary" id="results" tabindex="-1" aria-labelledby="results-title">
@@ -58,17 +55,29 @@
 <h2 id="browser-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.browser.title">votre navigateur</span></h2>
 <p class="block-sub" data-i18n="section.browser.sub">lisible par toute page, sans demander la permission</p>
 </div>
+<div class="action-box">
+<p data-i18n="scan.intro">Le bouton lit ce que ce navigateur montre à chaque page que vous visitez. Rien ne quitte cet onglet.</p>
+<button type="button" class="btn" id="run-scan" data-i18n="scan.run">LANCER L'ANALYSE</button>
+</div>
 <ul class="findings"></ul>
 </section>
 
 <section class="block" id="connection" aria-labelledby="connection-title">
 <div class="block-head">
-<h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">votre connexion</span></h2>
+<h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">vérifier mon adresse ip</span></h2>
 <p class="block-sub" data-i18n="section.connection.sub">ne se lance que sur un clic, et ne contacte que le serveur de leakcheck</p>
 </div>
 <div class="action-box">
-<p data-i18n="connection.intro">Le bouton envoie quelques requêtes au serveur de leakcheck, et nulle part ailleurs. Il lit l'adresse d'où vient votre connexion et la cherche dans sa propre copie d'une base d'adresses IP. Rien n'est conservé.</p>
-<button type="button" class="btn" id="run-connection" data-i18n="connection.run">VÉRIFIER MA CONNEXION</button>
+<p data-i18n="connection.intro">Le bouton envoie quelques requêtes au serveur de leakcheck, et nulle part ailleurs. Il lit l'adresse d'où vient votre connexion, la cherche dans sa propre copie d'une base d'adresses IP et demande à WebRTC quelles adresses il partage. Rien n'est conservé.</p>
+<fieldset class="threats" role="radiogroup" aria-labelledby="vpn-legend">
+<legend class="threats-legend" id="vpn-legend" data-i18n="connection.vpn.legend">utilisez-vous un VPN en ce moment&nbsp;?</legend>
+<div class="threat-options">
+<label class="threat"><input type="radio" name="vpn" value="yes" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="connection.vpn.yes">oui, un VPN est activé</span></span></label>
+<label class="threat"><input type="radio" name="vpn" value="no" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="connection.vpn.no">pas de VPN</span></span></label>
+</div>
+</fieldset>
+<p id="vpn-hint" data-i18n="connection.vpn.hint">Répondez d'abord à la question, puis appuyez sur VÉRIFIER MON IP.</p>
+<button type="button" class="btn" id="run-connection" aria-disabled="true" aria-describedby="vpn-hint" data-i18n="connection.run">VÉRIFIER MON IP</button>
 </div>
 <ul class="findings"></ul>
 <div class="actions" id="connection-tools" hidden>
@@ -87,7 +96,7 @@
 <p class="block-sub" data-i18n="section.localnet.sub">demande votre permission</p>
 </div>
 <div class="action-box">
-<p data-i18n="localnet.intro">Votre navigateur peut demander la permission avant que cette page atteigne les appareils de votre réseau domestique. Refuser est une réponse valable&nbsp;: cela veut dire que la protection fonctionne. Un site web ne peut voir ni les adresses MAC, ni les noms des appareils, ni les détails du Wi-Fi. Seule une application installée le peut.</p>
+<p data-i18n="localnet.intro">Votre navigateur peut demander la permission avant que cette page atteigne les appareils de votre réseau domestique. Vous avez totalement le droit de refuser&nbsp;: cela veut dire que la protection fonctionne. Un site web ne peut voir ni les adresses MAC, ni les noms des appareils, ni les détails du Wi-Fi. Seule une application installée le peut.</p>
 <button type="button" class="btn" id="run-localnet" data-i18n="localnet.run">SONDER MON RÉSEAU</button>
 </div>
 <ul class="findings"></ul>

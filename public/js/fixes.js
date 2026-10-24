@@ -92,11 +92,15 @@ function tagItem(tag, t) {
   const a = /** @type {HTMLAnchorElement} */ (el('a', 'fix-tag', text));
   a.href = `#finding-${id}`;
   // Move focus ourselves: the finding row may not exist yet. If the check was never run,
-  // focus its button instead, which is what makes the row appear.
+  // focus its button instead, which is what makes the row appear. The IP check needs the VPN
+  // question answered first, so an unanswered question gets the focus.
   a.addEventListener('click', (e) => {
     e.preventDefault();
-    const target = document.getElementById(`finding-${id}`) ?? document.getElementById(CONNECTION.includes(id) ? 'run-connection' : 'run-scan');
-    target?.focus();
+    const answered = document.querySelector('input[name="vpn"]:checked') !== null;
+    const start = !CONNECTION.includes(id) ? document.getElementById('run-scan')
+      : answered ? document.getElementById('run-connection') : document.querySelector('input[name="vpn"]');
+    const target = document.getElementById(`finding-${id}`) ?? start;
+    if (target instanceof HTMLElement) target.focus();
   });
   li.append(a);
   return li;

@@ -12,16 +12,17 @@ CAN'T TELL → INCERTAIN / INCIERTO. French uses "vous", Spanish uses "tú" (neu
 vocabulary: "un Mac", "Añadir"). Decide whether Latin American variants are needed.
 
 ### French (`fr.js`, `public/fr/index.html`)
-- [ ] Page `<title>` and `<meta name="description">`
-- [ ] Header, navigation, language picker labels, skip link, "{n} octets stockés"
-- [ ] Hero, scan button, summary tiles, footer (`hero.*`, `scan.*`, `results.*`, `summary.*`, `footer.*`)
-- [ ] Section titles and subtitles (`section.*`), panel labels (`panel.*`), tags (`tag.*`)
-- [ ] Browser findings: labels, values, "why" and "how to reduce it" (`finding.screen` … `finding.gpc`)
-- [ ] Connection: intro, buttons, VPN-off check, findings (`connection.*`, `finding.publicIp/provider/location/vpn*`)
-- [ ] Local network: intro, findings (`localnet.*`, `finding.router/lnaPrompt/otherDevices`)
-- [ ] Fix plan chrome: CTA, threat question, progress, rescan, note, tiers, meters, tags (`fix.cta` … `fix.tradeoff.label`)
+- [x] Page `<title>` and `<meta name="description">`
+- [x] Header, navigation, language picker labels, skip link, "{n} octets stockés"
+- [x] Hero, scan button, summary tiles, footer (`hero.*`, `scan.*`, `results.*`, `summary.*`, `footer.*`)
+- [x] Section titles and subtitles (`section.*`), panel labels (`panel.*`), tags (`tag.*`)
+- [x] Browser findings: labels, values, "why" and "how to reduce it" (`finding.screen` … `finding.gpc`)
+- [x] Connection: intro, buttons, VPN-off check, findings (`connection.*`, `finding.publicIp/provider/location/vpn*`)
+- [x] Local network: intro, findings (`localnet.*`, `finding.router/lnaPrompt/otherDevices`)
+- [x] Fix plan chrome: CTA, threat question, progress, rescan, note, tiers, meters, tags (`fix.cta` … `fix.tradeoff.label`)
+- [ ] Strings added after the first review (VPN question redesign): `scan.intro`, `nav.connection`, `section.connection.title`, `connection.intro`, `connection.run`, `connection.vpn.*`, `finding.publicIp.local`, `finding.publicIp.fix`, `finding.provider.fix`, `finding.location.why`, `finding.location.fix`, `finding.vpn4.why`, `finding.vpn6.why`, and the last step of `fix.ip.steps.*`
 - [ ] Fix cards: title, why, trade-off, and steps for each browser, for `block`, `dns`, `perms`, `browser`, `ip`, `split`, `tor`
-- [ ] Button labels are short enough and still natural: LANCER L'ANALYSE, VÉRIFIER MA CONNEXION, AFFICHER L'IP COMPLÈTE, REVÉRIFIER VPN COUPÉ, SONDER MON RÉSEAU, VOIR MES CORRECTIFS, RELANCER POUR VÉRIFIER
+- [ ] Button labels are short enough and still natural: LANCER L'ANALYSE, VÉRIFIER MON IP, AFFICHER L'IP COMPLÈTE, REVÉRIFIER VPN COUPÉ, SONDER MON RÉSEAU, VOIR MES CORRECTIFS, RELANCER POUR VÉRIFIER
 - [ ] Typography is consistent: a no-break space (U+00A0, not the narrow U+202F) before `: ; ? !` in `fr.js` values and in the static text of `public/fr/index.html` (a unit test enforces it), « » used only in `fix.perms.title`
 
 ### Spanish (`es.js`, `public/es/index.html`)
@@ -34,7 +35,7 @@ vocabulary: "un Mac", "Añadir"). Decide whether Latin American variants are nee
 - [ ] Local network: intro, findings (`localnet.*`, `finding.router/lnaPrompt/otherDevices`)
 - [ ] Fix plan chrome: CTA, threat question, progress, rescan, note, tiers, meters, tags (`fix.cta` … `fix.tradeoff.label`)
 - [ ] Fix cards: title, why, trade-off, and steps for each browser, for `block`, `dns`, `perms`, `browser`, `ip`, `split`, `tor`
-- [ ] Button labels: INICIAR EL ANÁLISIS, COMPROBAR MI CONEXIÓN, MOSTRAR LA IP COMPLETA, COMPROBAR SIN LA VPN, EXPLORAR MI RED, VER MIS SOLUCIONES, ANALIZAR DE NUEVO
+- [ ] Button labels: INICIAR EL ANÁLISIS, COMPROBAR MI IP, MOSTRAR LA IP COMPLETA, COMPROBAR SIN LA VPN, EXPLORAR MI RED, VER MIS SOLUCIONES, ANALIZAR DE NUEVO
 - [ ] Gender and number agreement in counts ("{leak} con fuga, {ok} protegidos", "{n} / {total} hechas")
 
 ## B. Follow every fix step in each real browser and language
@@ -78,7 +79,7 @@ Menu names to confirm:
 - [ ] Screen and time zone: Tor Browser and Mullvad Browser report the window size and UTC.
 - [ ] CPU / memory: Firefox, Safari, Tor Browser and Mullvad Browser leave `deviceMemory` undefined (row OK); Chrome, Edge and Brave expose it (row LEAK). The text no longer promises an OK from Brave.
 - [ ] Global Privacy Control: sent by Brave, Firefox (setting on), Mullvad Browser and Tor Browser.
-- [ ] Local IP via WebRTC: recent Chrome, Edge, Firefox and Safari show a `.local` name; uBlock Origin and Brave can block it.
+- [ ] Local IP via WebRTC (answer the VPN question, then CHECK MY IP): recent Chrome, Edge, Firefox and Safari show a `.local` name; uBlock Origin and Brave can block it.
 - [ ] Brave's canvas/audio noise ("changes each time") with default Shields.
 
 ## D. Local network probe

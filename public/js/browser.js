@@ -12,13 +12,13 @@
 /** @typedef {{id: FindingId, verdict: Verdict, value: string}} Finding */
 /** @typedef {(key: string, vars?: Record<string, string|number|undefined>) => string} T */
 /**
- * `offsetMin` is minutes east of UTC (Paris in summer: 120). `localCandidates` is null when WebRTC is unavailable.
+ * `offsetMin` is minutes east of UTC (Paris in summer: 120).
  * `canvas` is null when readback is blocked or blank, and 'unknown' when the test itself failed.
  * @typedef {{
  *   screen: {w: number, h: number, innerW: number, innerH: number, dpr: number},
  *   timeZone: string, offsetMin: number, languages: string[], gpu: string|null, fontCount: number,
  *   canvas: [string, string]|null|'unknown', audio: [string, string]|null, cores: number|undefined, memory: number|undefined,
- *   localCandidates: string[]|null, gpc: boolean|undefined
+ *   gpc: boolean|undefined
  * }} RawBrowser
  */
 
@@ -61,10 +61,7 @@ export function judgeBrowser(raw, t, lang = 'en') {
   const num = new Intl.NumberFormat(lang, { maximumFractionDigits: 2 });
   // Resolutions read as 2560 × 1440, without a thousands separator.
   const px = new Intl.NumberFormat(lang, { useGrouping: false });
-  const { screen, canvas, audio, localCandidates: cands } = raw;
-  // Chrome and Safari hide your real local address behind a random '.local' name (mDNS).
-  // Those names reveal nothing. Any other address is a real local IP, so it leaks.
-  const leakingIps = (cands ?? []).filter((c) => !c.endsWith('.local'));
+  const { screen, canvas, audio } = raw;
   return [
     {
       id: 'screen',
@@ -131,14 +128,6 @@ export function judgeBrowser(raw, t, lang = 'en') {
         raw.cores === undefined ? t('finding.cpu.coresHidden') : t('finding.cpu.cores', { n: num.format(raw.cores) }),
         raw.memory === undefined ? t('finding.cpu.memoryHidden') : t('finding.cpu.memory', { n: num.format(raw.memory) }),
       ].join(' · '),
-    },
-    {
-      // WebRTC (browser video calls) can reveal local network addresses to any page.
-      id: 'webrtcLocal',
-      verdict: verdict(leakingIps.length === 0),
-      value: cands === null ? t('finding.webrtcLocal.off')
-        : leakingIps.length ? t('finding.webrtcLocal.shown', { ips: leakingIps.join(', ') })
-        : t('finding.webrtcLocal.hidden'),
     },
     {
       id: 'gpc',
@@ -276,46 +265,12 @@ async function renderAudio() {
   }
 }
 
-// ICE candidates are the network addresses WebRTC could use to connect. With no ICE server
-// only addresses of this device appear, so nothing leaves it. 'host' candidates are local IPs.
-/**
- * Local addresses offered by WebRTC with no ICE server (nothing leaves the device).
- * @returns {Promise<string[]|null>}
- */
-async function localCandidates() {
-  if (typeof RTCPeerConnection === 'undefined') return null;
-  /** @type {RTCPeerConnection} */
-  let pc;
-  try {
-    pc = new RTCPeerConnection({ iceServers: [] });
-  } catch {
-    return null;
-  }
-  /** @type {Set<string>} */
-  const found = new Set();
-  try {
-    await within(new Promise((resolve) => {
-      pc.onicecandidate = (e) => {
-        if (!e.candidate) return resolve(undefined);
-        // An empty candidate means gathering is finished. Otherwise take the address (field 5 of the candidate line).
-        const addr = e.candidate.address ?? e.candidate.candidate.split(' ')[4];
-        if (addr) found.add(addr);
-      };
-      pc.createDataChannel('leakcheck');
-      pc.createOffer().then((o) => pc.setLocalDescription(o)).catch(() => resolve(undefined));
-    }), 2000, undefined);
-  } finally {
-    pc.close();
-  }
-  return [...found];
-}
-
-// The three slow probes run in parallel to keep the scan quick.
+// The two slow probes run in parallel to keep the scan quick.
 /** @returns {Promise<RawBrowser>} */
 export async function collectBrowser() {
   const nav = /** @type {Navigator & {deviceMemory?: number, globalPrivacyControl?: boolean}} */ (navigator);
   // Each probe degrades on its own: a failure gives its unknown (or off) form, never a rejected scan.
-  const [canvas, audio, cands] = await Promise.all([
+  const [canvas, audio] = await Promise.all([
     (async () => {
       try {
         const a = drawCanvas();
@@ -334,7 +289,6 @@ export async function collectBrowser() {
         return null;
       }
     })(),
-    localCandidates().catch(() => null),
   ]);
   return {
     screen: { w: screen.width, h: screen.height, innerW: innerWidth, innerH: innerHeight, dpr: devicePixelRatio },
@@ -347,7 +301,6 @@ export async function collectBrowser() {
     audio,
     cores: navigator.hardwareConcurrency || undefined,
     memory: nav.deviceMemory,
-    localCandidates: cands,
     gpc: nav.globalPrivacyControl,
   };
 }

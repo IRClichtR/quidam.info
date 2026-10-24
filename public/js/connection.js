@@ -2,15 +2,17 @@
 // Connection findings. Every request goes to leakcheck's own server, and only after a click.
 
 // What we ask the network about you: your public IP (the address websites see), whose network it
-// belongs to, and whether a VPN really hides it. Every request goes to leakcheck's own server
-// and STUN server, and only after the visitor clicks. Nothing is stored (see state.js).
+// belongs to, whether a VPN really hides it, and which local addresses WebRTC shares. Every request
+// goes to leakcheck's own server and STUN server, and only after the visitor answers the VPN
+// question and clicks. Nothing is stored (see state.js).
 // Judging is pure logic; fetching and WebRTC are the browser-only parts.
 /** @typedef {import('./browser.js').Finding} Finding */
 /** @typedef {import('./browser.js').T} T */
 /** @typedef {{ ip: string, family: 4|6, country: string|null, city: string|null, asn: number|null,
  *   asOrg: string|null, tor: boolean, privateRelay: boolean }} Whoami */
 /** @typedef {Whoami|null|'unavailable'|'busy'} Lookup */
-/** @typedef {{v4: string[], v6: string[]}} Srflx */
+/** @typedef {{v4: string[], v6: string[], local: string[]}} Ice */
+/** @typedef {'hidden'|'same'|'otherFamily'} VpnOff */
 /** @typedef {{v4: string, v6: string, stunPort: number}} Origins */
 
 // IPv4 looks like 1.2.3.4. IPv6 is the newer, longer form with colons. A connection can have one or both.
@@ -47,20 +49,41 @@ export function maskIp(ip) {
   return groups6(ip).slice(0, 4).join(':') + ':•••';
 }
 
+// When the browser and the server are on the same machine or network (local testing), the server
+// sees a loopback or private address, never the public one. Such an address says nothing about
+// the visitor, so it must not be judged as if it were public.
+/**
+ * Whether an address is loopback, private (RFC 1918, IPv6 fc00::/7), link-local or carrier-grade NAT.
+ * @param {string} ip
+ */
+export function isLocalIp(ip) {
+  // An IPv4 address written inside IPv6 ('::ffff:1.2.3.4') is judged as the IPv4 address.
+  ip = ip.replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, '');
+  if (isV4(ip)) {
+    const [a, b] = ip.split('.').map(Number);
+    return a === 0 || a === 127 || a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
+      || (a === 169 && b === 254) || (a === 100 && b >= 64 && b <= 127);
+  }
+  const first = parseInt(groups6(ip)[0] || '0', 16);
+  return sameIp(ip, '::1') || sameIp(ip, '::') || (first & 0xfe00) === 0xfc00 || (first & 0xffc0) === 0xfe80;
+}
+
 /** @param {unknown} x @returns {x is Whoami} */
 function isWhoami(x) {
   return typeof x === 'object' && x !== null && typeof (/** @type {any} */ (x).ip) === 'string';
 }
 
 // Pick the first answer that is a real result. Order matters: the page's own origin first,
-// then IPv4, then IPv6.
+// then IPv4, then IPv6. A public address wins over a local one (testing on this machine).
 /**
- * The lookup that stands for the visitor's public address: the main one, else IPv4, else IPv6.
+ * The lookup that stands for the visitor's public address: the main one, else IPv4, else IPv6,
+ * preferring a public address to a local one.
  * @param {Lookup} main @param {Lookup} v4 @param {Lookup} v6
  * @returns {Whoami|null}
  */
 export function primaryLookup(main, v4, v6) {
-  return [main, v4, v6].find(isWhoami) ?? null;
+  const found = [main, v4, v6].filter(isWhoami);
+  return found.find((w) => !isLocalIp(w.ip)) ?? found[0] ?? null;
 }
 
 // A request that never answers must not freeze the page, so a timer cancels it.
@@ -104,27 +127,30 @@ export function stunUrls({ v4, v6, stunPort }) {
   return [v4, v6].map((o) => `stun:${new URL(o).hostname}:${stunPort}`);
 }
 
-// 'srflx' (server-reflexive) is a WebRTC ICE candidate type: the public address a STUN server
-// saw when the browser contacted it. WebRTC can bypass a VPN's tunnel, so if the srflx address
-// differs from the IP the website sees, the real address leaks around the VPN.
-// We collect per family because IPv4 can only be compared with IPv4 (and IPv6 with IPv6).
+// ICE candidates are the network addresses WebRTC offers for a call. Two types matter here:
+// 'host' is an address of this device on its own network (or a random '.local' name hiding it),
+// 'srflx' (server-reflexive) is the public address a STUN server saw when the browser contacted it.
+// WebRTC can bypass a VPN's tunnel, so if the srflx address differs from the IP the website sees,
+// the real address leaks around the VPN.
+// We collect srflx per family because IPv4 can only be compared with IPv4 (and IPv6 with IPv6).
 /**
- * Every public address our STUN server saw, by family, from server-reflexive candidates (one per interface).
+ * The addresses WebRTC offers: public ones our STUN server saw, by family (one per interface),
+ * and local (host) ones. With no URL, no server is asked and only local addresses come back.
  * @param {string[]} urls
  * @param {number} [timeoutMs]
- * @returns {Promise<Srflx|null>} null when WebRTC is missing or blocked
+ * @returns {Promise<Ice|null>} null when WebRTC is missing or blocked
  */
-export async function gatherSrflx(urls, timeoutMs = 5000) {
+export async function gatherIce(urls, timeoutMs = 5000) {
   if (typeof RTCPeerConnection === 'undefined') return null;
   /** @type {RTCPeerConnection} */
   let pc;
   try {
-    pc = new RTCPeerConnection({ iceServers: [{ urls }] });
+    pc = new RTCPeerConnection({ iceServers: urls.length ? [{ urls }] : [] });
   } catch {
     return null;
   }
-  /** @type {Srflx} */
-  const found = { v4: [], v6: [] };
+  /** @type {Ice} */
+  const found = { v4: [], v6: [], local: [] };
   /** @type {ReturnType<typeof setTimeout>|undefined} */
   let timer;
   try {
@@ -136,10 +162,12 @@ export async function gatherSrflx(urls, timeoutMs = 5000) {
         // A candidate line looks like 'candidate:1 1 udp 2113 203.0.113.5 54321 typ srflx ...'.
         // Field 5 is the address and field 8 is the type. Older browsers lack c.address / c.type, so we parse.
         const parts = c.candidate.split(' ');
-        if ((c.type ?? parts[7]) !== 'srflx') return;
+        const type = c.type ?? parts[7];
         // Chromium writes IPv6 addresses in brackets.
         const addr = (c.address ?? parts[4] ?? '').replace(/^\[(.*)\]$/, '$1');
         if (!addr) return;
+        if (type === 'host' && !found.local.includes(addr)) found.local.push(addr);
+        if (type !== 'srflx') return;
         const list = isV4(addr) ? found.v4 : isV6(addr) ? found.v6 : null;
         if (list && !list.some((a) => sameIp(a, addr))) list.push(addr);
       };
@@ -168,37 +196,56 @@ function otherNetwork(v4, v6) {
   return v4.asn !== null && v6.asn !== null && v4.asn !== v6.asn;
 }
 
-// 'publicIp' is CAN'T TELL (not a leak by itself: the site must see some address). Verdicts for
-// provider and location depend on whether they point to where the browser says it is.
+// Chrome and Safari hide your real local address behind a random '.local' name (mDNS).
+// Those names reveal nothing. Any other address is a real local IP, so it leaks.
+/**
+ * The local IP finding: what WebRTC shares about this device on its own network.
+ * @param {Ice|null} ice
+ * @param {T} t
+ * @returns {Finding}
+ */
+function judgeLocal(ice, t) {
+  const shown = (ice?.local ?? []).filter((a) => !a.endsWith('.local'));
+  return {
+    id: 'webrtcLocal',
+    verdict: shown.length ? 'leak' : 'ok',
+    value: ice === null ? t('finding.webrtcLocal.off')
+      : shown.length ? t('finding.webrtcLocal.shown', { ips: shown.join(', ') })
+        : t('finding.webrtcLocal.hidden'),
+  };
+}
+
+// The visitor tells us whether a VPN is on, because strong VPNs leave no sign a site can see.
+// Without a VPN, the address, its provider and its location are the visitor's own: LEAK.
+// With a VPN we can't tell until the VPN-off recheck: a different address then means the VPN
+// hid it (OK), the same one means it didn't (LEAK).
 /**
  * Decide the connection findings.
- * `main` is the lookup on this page's origin; `v4`/`v6` the lookups on the single-family origins.
- * @param {{main: Lookup, v4: Lookup, v6: Lookup, srflx: Srflx|null, timeZone: string,
- *   zoneCountries: Record<string, string[]>, reveal?: boolean}} input
+ * `main` is the lookup on this page's origin; `v4`/`v6` the lookups on the single-family origins;
+ * `usesVpn` the visitor's answer; `vpnOff` the result of the VPN-off recheck, if one ran.
+ * @param {{main: Lookup, v4: Lookup, v6: Lookup, ice: Ice|null, usesVpn: boolean,
+ *   vpnOff?: VpnOff|null, reveal?: boolean}} input
  * @param {T} t
  * @returns {Finding[]}
  */
-export function judgeConnection({ main, v4, v6, srflx, timeZone, zoneCountries, reveal = false }, t) {
+export function judgeConnection({ main, v4, v6, ice, usesVpn, vpnOff = null, reveal = false }, t) {
   /** @param {string} ip */
   const show = (ip) => (reveal ? ip : maskIp(ip));
+  const local = judgeLocal(ice, t);
   const who = primaryLookup(main, v4, v6);
   if (!who) {
     const all = [main, v4, v6];
     const key = all.includes('busy') ? 'busy' : all.includes('unavailable') ? 'unavailable' : 'failed';
-    return [{ id: 'publicIp', verdict: 'unknown', value: t(`finding.publicIp.${key}`) }];
+    return [{ id: 'publicIp', verdict: 'unknown', value: t(`finding.publicIp.${key}`) }, local];
   }
-  // Tor and iCloud Private Relay hide the real address on purpose, so these are OK.
+  // Local testing: the other rows would judge an address that isn't the visitor's public one.
+  if (isLocalIp(who.ip)) return [{ id: 'publicIp', verdict: 'unknown', value: t('finding.publicIp.local', { ip: show(who.ip) }) }, local];
+  // Tor and iCloud Private Relay hide the real address on purpose, so these are OK whatever the answer.
   const hidden = who.tor || who.privateRelay;
-  // A zone with no country (such as UTC) says nothing about where the browser is.
-  const zone = zoneCountries[timeZone];
-  // Does the IP's country match the country of the browser's time zone? A match means the IP
-  // still points to where you are: LEAK. A mismatch (VPN) is OK. If either side is unknown
-  // (no country for the IP, or a zone such as UTC that belongs to no one country) we cannot
-  // compare, so CAN'T TELL rather than a wrong guess.
   /** @type {import('./browser.js').Verdict} */
-  const home = hidden ? 'ok'
-    : who.country === null || zone === undefined ? 'unknown'
-      : zone.includes(who.country) ? 'leak' : 'ok';
+  const own = hidden ? 'ok'
+    : !usesVpn || vpnOff === 'same' ? 'leak'
+      : vpnOff === 'hidden' ? 'ok' : 'unknown';
   const ipKey = who.tor ? 'finding.publicIp.tor' : who.privateRelay ? 'finding.publicIp.relay' : 'finding.publicIp.value';
   const asn = who.asn === null ? null : `AS${who.asn}`;
   const provider = [who.asOrg, asn].filter((x) => x !== null).join(' · ');
@@ -206,23 +253,33 @@ export function judgeConnection({ main, v4, v6, srflx, timeZone, zoneCountries, 
 
   /** @type {Finding[]} */
   const out = [
-    { id: 'publicIp', verdict: hidden ? 'ok' : 'unknown', value: t(ipKey, { ip: show(who.ip) }) },
-    { id: 'provider', verdict: home, value: provider || t('finding.unknown') },
-    { id: 'location', verdict: home, value: place || t('finding.unknown') },
+    { id: 'publicIp', verdict: own, value: t(ipKey, { ip: show(who.ip) }) },
+    { id: 'provider', verdict: own, value: provider || t('finding.unknown') },
+    { id: 'location', verdict: own, value: place || t('finding.unknown') },
   ];
-  // One VPN check per family that answered. 'seen' = srflx addresses from STUN; 'lookup' = what
-  // the website sees. Different means WebRTC bypasses the VPN.
-  for (const [id, lookup, seen] of /** @type {const} */ ([['vpn4', v4, srflx?.v4], ['vpn6', v6, srflx?.v6]])) {
-    if (!isWhoami(lookup)) continue;
+  // One VPN check per family that answered, only for visitors with a VPN: without one there is
+  // nothing to leak past. 'seen' = srflx addresses from STUN; 'lookup' = what the website sees.
+  // Different means WebRTC bypasses the VPN.
+  const families = usesVpn ? /** @type {const} */ ([['vpn4', v4, ice?.v4], ['vpn6', v6, ice?.v6]]) : [];
+  for (const [id, lookup, seen] of families) {
+    // A local address (testing on this machine) can't be compared with a public STUN address.
+    if (!isWhoami(lookup) || isLocalIp(lookup.ip)) continue;
     // Any interface showing another address is a leak, even if another one matches.
     const other = (seen ?? []).filter((ip) => !sameIp(ip, lookup.ip));
     if (other.length) out.push({ id, verdict: 'leak', value: t('finding.vpn.other', { ip: other.map(show).join(', ') }) });
-    // No STUN address of this family: we cannot compare, so CAN'T TELL.
+    // IPv6 on another network than IPv4: an IPv4-only VPN leaves IPv6 outside the tunnel.
     else if (id === 'vpn6' && otherNetwork(v4, lookup)) {
       out.push({ id, verdict: 'leak', value: t('finding.vpn.otherNetwork', { v6: `AS${lookup.asn}`, v4: `AS${/** @type {Whoami} */ (v4).asn}` }) });
+    // No STUN address of this family: we cannot compare, so CAN'T TELL.
     } else if (!seen?.length) out.push({ id, verdict: 'unknown', value: t('finding.vpn.none') });
-    else out.push({ id, verdict: 'ok', value: t('finding.vpn.same', { ip: show(lookup.ip) }) });
+    // The same address only proves WebRTC doesn't get around the VPN. A VPN that hides nothing
+    // (or one that is off) gives a match too, so this follows the VPN-off comparison like the rows above.
+    else {
+      const verdict = lookup.tor || lookup.privateRelay ? 'ok' : vpnOff === 'hidden' ? 'ok' : vpnOff === 'same' ? 'leak' : 'unknown';
+      out.push({ id, verdict, value: t('finding.vpn.same', { ip: show(lookup.ip) }) });
+    }
   }
+  out.push(local);
   return out;
 }
 

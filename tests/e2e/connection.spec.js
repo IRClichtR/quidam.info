@@ -12,8 +12,12 @@ async function open(page) {
   await page.locator('html[data-i18n-ready="en"]').waitFor();
 }
 
-/** @param {import('@playwright/test').Page} page */
-async function check(page) {
+/**
+ * Answer the VPN question, then run the check.
+ * @param {import('@playwright/test').Page} page @param {'yes'|'no'} [vpn]
+ */
+async function check(page, vpn = 'yes') {
+  await page.locator(`#connection input[name="vpn"][value="${vpn}"]`).check();
   await page.locator('#run-connection').click();
   await expect(page.locator('#announce')).toContainText('Connection check', { timeout: 10_000 });
   await expect(page.locator('#run-connection')).not.toHaveAttribute('aria-disabled', 'true');
@@ -53,9 +57,100 @@ test('before the click the section names only leakcheck\'s own server, and nothi
   const text = await page.locator('#connection').innerText();
   expect(text).toContain("leakcheck's own server");
   expect(text).not.toMatch(/google|cloudflare|ipify|ipinfo|db-ip|stun\./i);
-  await expect(page.locator('#run-connection')).toHaveText('CHECK MY CONNECTION');
+  await expect(page.locator('#connection h2')).toContainText('check my ip address');
+  await expect(page.locator('#run-connection')).toHaveText('CHECK MY IP');
   await page.waitForTimeout(500);
   expect(urls.filter((u) => u.includes('/api/'))).toEqual([]);
+});
+
+test('the check button waits for the VPN answer', async ({ page }) => {
+  /** @type {string[]} */
+  const urls = [];
+  page.on('request', (r) => urls.push(r.url()));
+  await open(page);
+  const btn = page.locator('#run-connection');
+  await expect(btn).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#vpn-hint')).toBeVisible();
+  // force: Playwright itself waits while aria-disabled is set; a real visitor can still click.
+  await btn.click({ force: true });
+  await page.waitForTimeout(500);
+  expect(urls.filter((u) => u.includes('/api/'))).toEqual([]);
+  await expect(page.locator('#connection .findings li')).toHaveCount(0);
+  await page.getByRole('radio', { name: 'no VPN' }).check();
+  await expect(btn).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#vpn-hint')).toBeHidden();
+});
+
+test('no VPN: public IP, provider and location read LEAK, no VPN rows, no VPN-off button', async ({ page }) => {
+  await cannedWhoami(page);
+  await open(page);
+  await check(page, 'no');
+  for (const id of ['publicIp', 'provider', 'location']) {
+    await expect(page.locator(`#connection [data-finding="${id}"] .tag-leak`)).toHaveCount(1);
+  }
+  await expect(page.locator('#connection [data-finding^="vpn"]')).toHaveCount(0);
+  await expect(page.locator('#vpn-off-box')).toBeHidden();
+  await expect(page.locator('#connection [data-finding="webrtcLocal"]')).toHaveCount(1);
+});
+
+test('with a VPN: identity rows read CAN\'T TELL, then follow the VPN-off comparison', async ({ page }) => {
+  await cannedWhoami(page);
+  await open(page);
+  await check(page, 'yes');
+  const ids = ['publicIp', 'provider', 'location'];
+  for (const id of ids) await expect(page.locator(`#connection [data-finding="${id}"] .tag-unknown`)).toHaveCount(1);
+  await page.locator('#vpn-off').click();
+  await expect(page.locator('#vpn-off-result')).toHaveText("same: your VPN isn't hiding your IP");
+  for (const id of ids) await expect(page.locator(`#connection [data-finding="${id}"] .tag-leak`)).toHaveCount(1);
+  await page.unroute('**/api/whoami');
+  await cannedWhoami(page, () => ({ ...V4, ip: '198.51.100.7' }));
+  await page.locator('#vpn-off').click();
+  await expect(page.locator('#vpn-off-result')).toHaveText('different: your VPN hides your IP');
+  for (const id of ids) await expect(page.locator(`#connection [data-finding="${id}"] .tag-ok`)).toHaveCount(1);
+});
+
+test('changing the answer after the check re-judges the rows without asking the server again', async ({ page }) => {
+  await cannedWhoami(page);
+  await open(page);
+  await check(page, 'yes');
+  /** @type {string[]} */
+  const urls = [];
+  page.on('request', (r) => urls.push(r.url()));
+  await expect(page.locator('#connection [data-finding="vpn4"]')).toHaveCount(1);
+  await page.getByRole('radio', { name: 'no VPN' }).check();
+  await expect(page.locator('#connection [data-finding="publicIp"] .tag-leak')).toHaveCount(1);
+  await expect(page.locator('#connection [data-finding^="vpn"]')).toHaveCount(0);
+  await expect(page.locator('#vpn-off-box')).toBeHidden();
+  await page.getByRole('radio', { name: 'yes, a VPN is on' }).check();
+  await expect(page.locator('#connection [data-finding="publicIp"] .tag-unknown')).toHaveCount(1);
+  await expect(page.locator('#vpn-off-box')).toBeVisible();
+  expect(urls).toEqual([]);
+});
+
+test('the local IP row is in this section, not in the browser section', async ({ page }) => {
+  await cannedWhoami(page);
+  await open(page);
+  await page.locator('#run-scan').click();
+  await expect(page.locator('#browser li')).toHaveCount(9, { timeout: 10_000 });
+  await expect(page.locator('#browser [data-finding="webrtcLocal"]')).toHaveCount(0);
+  await check(page);
+  await expect(page.locator('#connection [data-finding="webrtcLocal"]')).toHaveCount(1);
+});
+
+test.describe('without WebRTC', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      delete (/** @type {any} */ (window)).RTCPeerConnection;
+    });
+  });
+  test('the check finishes and the local IP finding is OK', async ({ page }) => {
+    await cannedWhoami(page);
+    await open(page);
+    await check(page);
+    const row = page.locator('#connection li[data-finding="webrtcLocal"]');
+    await expect(row.locator('.tag-ok')).toHaveCount(1);
+    await expect(row.locator('.row-value')).toHaveText('WebRTC off');
+  });
 });
 
 test('the check talks only to our own origins and our own STUN server', async ({ page }) => {
@@ -138,7 +233,7 @@ test('a 503 from /api/whoami shows "lookup unavailable"', async ({ page }) => {
   }));
   await open(page);
   await check(page);
-  await expect(page.locator('#connection .findings li')).toHaveCount(1);
+  await expect(page.locator('#connection .findings li')).toHaveCount(2);
   await expect(page.locator('#connection [data-finding="publicIp"]')).toContainText('lookup unavailable');
   await expect(page.locator('#connection [data-finding="publicIp"] .tag-unknown')).toHaveCount(1);
 });
@@ -153,14 +248,17 @@ test('the VPN-off recheck says "same" when both lookups match', async ({ page })
   await expect(page.locator('#vpn-off-result')).toHaveText("same: your VPN isn't hiding your IP");
 });
 
-test('re-running the check clears the VPN-off result', async ({ page }) => {
+test('re-running the check from another address clears the VPN-off result', async ({ page }) => {
   await cannedWhoami(page);
   await open(page);
   await check(page);
   await page.locator('#vpn-off').click();
   await expect(page.locator('#vpn-off-result')).toHaveText("same: your VPN isn't hiding your IP");
+  await page.unroute('**/api/whoami');
+  await cannedWhoami(page, () => ({ ...V4, ip: '198.51.100.7' }));
   await check(page);
   await expect(page.locator('#vpn-off-result')).toHaveText('');
+  await expect(page.locator('#connection [data-finding="publicIp"] .tag-unknown')).toHaveCount(1);
 });
 
 test('the VPN-off recheck says "different" when the second lookup changed', async ({ page }) => {
@@ -191,7 +289,7 @@ test('the summary counts browser and connection findings together', async ({ pag
   await cannedWhoami(page);
   await open(page);
   await page.locator('#run-scan').click();
-  await expect(page.locator('#browser li')).toHaveCount(10, { timeout: 10_000 });
+  await expect(page.locator('#browser li')).toHaveCount(9, { timeout: 10_000 });
   await check(page);
   const leak = Number(await page.locator('#results .tile-leak span').textContent());
   const ok = Number(await page.locator('#results .tile-ok span').textContent());
@@ -206,4 +304,68 @@ test('with only the connection checked, the uniqueness tile says the browser is 
   const tile = page.locator('#results .tiles .tile').nth(2);
   await expect(tile).toContainText('not scanned yet');
   await expect(tile).not.toContainText('blends in');
+});
+
+test('the VPN-off check compares with the address of the latest check, not an older one', async ({ page }) => {
+  // First check with the VPN off (home address), then with the VPN on (another address).
+  await cannedWhoami(page);
+  await open(page);
+  await check(page, 'no');
+  await page.unroute('**/api/whoami');
+  await cannedWhoami(page, () => ({ ...V4, ip: '198.51.100.7' }));
+  await check(page, 'yes');
+  // VPN off again: the home address comes back, which differs from the VPN address.
+  await page.unroute('**/api/whoami');
+  await cannedWhoami(page);
+  await page.locator('#vpn-off').click();
+  await expect(page.locator('#vpn-off-result')).toHaveText('different: your VPN hides your IP');
+  await expect(page.locator('#connection [data-finding="publicIp"] .tag-ok')).toHaveCount(1);
+});
+
+test('a failed VPN-off check puts the rows back to CAN\'T TELL', async ({ page }) => {
+  await cannedWhoami(page);
+  await open(page);
+  await check(page, 'yes');
+  await page.locator('#vpn-off').click();
+  await expect(page.locator('#connection [data-finding="publicIp"] .tag-leak')).toHaveCount(1);
+  await page.unroute('**/api/whoami');
+  await page.route('**/api/whoami', (route) => route.abort());
+  await page.locator('#vpn-off').click();
+  await expect(page.locator('#vpn-off-result')).toHaveText('The second lookup did not answer. Try again.');
+  await expect(page.locator('#connection [data-finding="publicIp"] .tag-unknown')).toHaveCount(1);
+});
+
+test('a rescan keeps the VPN-off verdict while the address is unchanged', async ({ page }) => {
+  await cannedWhoami(page);
+  await open(page);
+  await check(page, 'yes');
+  await page.locator('#vpn-off').click();
+  await expect(page.locator('#connection [data-finding="publicIp"] .tag-leak')).toHaveCount(1);
+  await page.locator('#show-fixes').click();
+  await page.getByRole('button', { name: 'RESCAN TO VERIFY' }).click();
+  await expect(page.locator('#rescan-result')).not.toBeEmpty({ timeout: 15_000 });
+  await expect(page.locator('#connection [data-finding="publicIp"] .tag-leak')).toHaveCount(1);
+  await expect(page.locator('#vpn-off-result')).toHaveText("same: your VPN isn't hiding your IP");
+});
+
+test('pressing the check button before answering points to the question', async ({ page }) => {
+  await open(page);
+  // force: Playwright itself waits while aria-disabled is set; a real visitor can still click.
+  await page.locator('#run-connection').click({ force: true });
+  await expect(page.getByRole('radio', { name: 'yes, a VPN is on' })).toBeFocused();
+  await expect(page.locator('#announce')).toHaveText('Answer the question first, then press CHECK MY IP.');
+  await page.getByRole('radio', { name: 'no VPN' }).check();
+  // The hint is gone, so the button no longer points to it.
+  await expect(page.locator('#run-connection')).not.toHaveAttribute('aria-describedby');
+});
+
+test('testing on this machine explains why no public address is shown', async ({ page }) => {
+  const loop = { ...V4, ip: '::1', family: 6, country: null, city: null };
+  await cannedWhoami(page, (u) => (u.hostname === '127.0.0.1' ? { ...loop, ip: '127.0.0.1', family: 4 } : loop));
+  await open(page);
+  await check(page, 'yes');
+  await expect(page.locator('#connection .findings > li')).toHaveCount(2);
+  await expect(page.locator('#connection [data-finding="publicIp"]')).toContainText("this machine or your local network: leakcheck can't see your public address from here");
+  await expect(page.locator('#connection [data-finding="publicIp"] .tag-unknown')).toHaveCount(1);
+  await expect(page.locator('#vpn-off-box')).toBeHidden();
 });

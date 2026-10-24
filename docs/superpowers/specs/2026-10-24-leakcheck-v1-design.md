@@ -40,8 +40,8 @@ This plan ends with the finished site **running on localhost** for local testing
 | Public STUN server | Our server answers STUN binding requests over UDP itself **(Floriane)**. |
 | Public IP "OK when it belongs to a VPN, Tor or relay" | OK when the IP is on the **Tor Project exit list** or **Apple iCloud Private Relay egress list** **(Floriane)**. Otherwise the page says it can't tell whether a VPN is used (strong VPNs such as Mullvad, Proton, Nym leave no sign) and offers leakcheck's own **"Check again with VPN off"** button **(Floriane)**. |
 | Approximate location with accuracy radius | City and country only; DB-IP Lite has no radius. |
-| Location "OK when city differs from the browser timezone, or is the relay's" | OK when the IP is Tor or Private Relay, **or when the IP's country has no time zone matching the browser's time zone** (country-to-zone table from IANA `zone1970.tab`, committed as a small JSON file). The page warns that a good VPN exiting in the visitor's own time zone will still show as LEAK **(Floriane)**. |
-| Provider "OK when not the visitor's home ISP" | Same rule as Location: OK when Tor/Relay or the time zone mismatch suggests the IP isn't home **(builder's call, please check)**. |
+| Location "OK when city differs from the browser timezone, or is the relay's" | Follows the public IP row: OK on Tor or Private Relay; otherwise decided by the visitor's VPN answer and the VPN-off check (see "IP section" below). The time-zone comparison was dropped on 2026-10-24 **(Floriane)**. |
+| Provider "OK when not the visitor's home ISP" | Same rule as Location **(Floriane)**. |
 | Third-party cookies finding | Moved to roadmap (needs a second site). The "Separate logged-in and anonymous browsing" fix card keeps its "Cookies" tag without a link to a result **(Floriane)**. |
 | VPN check, one IP | **IPv6 leak detection in v1 (Floriane):** besides the main address, the page calls `/api/whoami` on an IPv4-only and an IPv6-only hostname of the same server, and compares each family with its matching STUN result. On localhost these are `127.0.0.1` and `[::1]`; the hosting step must provide two such hostnames. |
 | Secure DNS finding | Removed from v1, moved to roadmap. The "Turn on secure DNS" fix card stays, without a scan tag **(Floriane)**. |
@@ -77,13 +77,23 @@ One Node process, three jobs:
 - **Connection section** names leakcheck's own server as the only service contacted, before the click.
 - **VPN check:** compare the IPs from `/api/whoami` (main, IPv4-only and IPv6-only hostnames) with the `srflx` candidates from our STUN server, IPv4 with IPv4 and IPv6 with IPv6. Any family showing a different address = LEAK. No `srflx` within about 5 seconds (UDP blocked, WebRTC disabled) = "no leak observable". A family the visitor doesn't have is simply not shown.
 - **Localhost testing (Floriane: both):** a dev-only environment variable makes the server treat requests as coming from a given IP so automated tests get real DB-IP, Tor and Relay answers. It is ignored unless the server runs in development mode, never read from a request header, and covered by a security test. Manual checks also run over the machine's LAN address. Trusting `X-Forwarded-For` behind a proxy waits for the hosting step.
-- **"Check again with VPN off":** the tab keeps the first address in memory, runs a second lookup, and shows "different: your VPN hides your IP" or "same: your VPN isn't hiding your IP". Nothing stored.
+- **"Check again with VPN off":** the tab keeps the address of the latest check in memory, runs a second lookup of the same family, and shows "different: your VPN hides your IP" or "same: your VPN isn't hiding your IP". The result decides the rows (see "IP section"). Nothing stored.
 - **"Likely unique" tile:** count of LEAK results among the fingerprint signals (screen, timezone, languages, graphics card, fonts, canvas, audio, CPU/memory) → 0–2 low, 3–5 medium, 6+ high; shown in words and explained as a rough estimate **(Floriane chose the counting method; thresholds builder's call)**.
 - **Threat question promotes matching fixes (Floriane):** advertisers → content blocker and blending browser first; internet provider / Wi-Fi → secure DNS and hide IP first; someone looking for me → Tor and hide IP first.
 - **Fonts:** Claude downloads VCR OSD Mono from dafont during the build **(Floriane)**. CSS stack `'VCR OSD Mono', 'VT323', monospace` so any missing French or Spanish glyph falls back per character **(Floriane)**; a test checks coverage. VT323 and IBM Plex Mono self-hosted from their official sources.
 - **Translations:** Claude drafts French and Spanish; marked "needs native review" before release **(Floriane)**.
 - **Fix steps per browser** (Chrome, Firefox, Safari, Edge, Brave, with menu names per language): Claude drafts; flagged "verify in each browser before launch" **(Floriane)**.
 - **DB-IP credit:** a visible "IP data by DB-IP" link, required by CC BY 4.0.
+
+## IP section (amended 2026-10-24, Floriane)
+
+- The "your connection" section is now **"check my ip address"**, in the same place. It holds public IP, provider, location, the IPv4 and IPv6 VPN checks, and the local IP via WebRTC (moved from the browser section; it now runs on this section's button, not on RUN THE SCAN).
+- The visitor first answers **"are you using a VPN right now?" yes / no**. CHECK MY IP works only after an answer. Changing the answer re-judges the rows without a new request.
+- **No:** public IP, provider and location read LEAK; no VPN rows, no VPN-off button.
+- **Yes:** public IP, provider and location read CAN'T TELL until "Check again with VPN off": a changed address reads OK, the same one LEAK. The IPv4/IPv6 VPN rows follow the same comparison when WebRTC shows the same address; another WebRTC address, or IPv6 on another network than IPv4, is LEAK at once.
+- Tor and iCloud Private Relay read OK whatever the answer.
+- A loopback or private address (testing on this machine or a LAN) shows one CAN'T TELL row explaining that the public address can't be seen from here, plus the local IP row.
+- RUN THE SCAN sits in the browser section, not at the top of the page.
 
 ## Security baseline (in scope)
 
@@ -105,7 +115,7 @@ One Node process, three jobs:
 - **Rescan** reruns the browser tests, and reruns a click-gated test only if the visitor already ran it in this tab.
 - Fix-card tags map to findings by a table in `fixes.js`; tags with no v1 finding (Trackers, DNS, Cookies) show without a link.
 - **VCR OSD Mono licence:** check the licence in the downloaded archive. If redistribution isn't clearly allowed, the font file stays out of git and a script fetches it.
-- The country-to-time-zone table is generated once from IANA `zone1970.tab` and committed.
+- ~~The country-to-time-zone table is generated once from IANA `zone1970.tab` and committed.~~ Removed with the time-zone comparison.
 
 ## Known risks for the hosting step
 

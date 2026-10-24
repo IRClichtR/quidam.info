@@ -226,6 +226,8 @@ main {
 .btn-secondary { background: transparent; color: var(--fg); border-color: var(--fg); }
 .btn:focus-visible { outline-color: var(--fg); }
 .btn[aria-disabled="true"] { cursor: progress; }
+/* Waiting for the VPN answer, not busy: the hint next to it says why. */
+.btn[aria-disabled="true"][aria-describedby="vpn-hint"] { cursor: not-allowed; }
 
 /* ---------- tags ---------- */
 /* Verdict badges: leak is filled red, OK and can't-tell are outlined. */
@@ -354,6 +356,8 @@ main {
 }
 .action-box > p { flex: 1 1 20rem; color: var(--soft); }
 .action-box > .vpn-off-result { flex-basis: 100%; color: var(--fg); font-weight: 700; }
+/* The VPN question reuses the threat radio style, on its own line. */
+.action-box > .threats { flex-basis: 100%; }
 .vpn-off-result:empty { display: none; }
 .action-box[hidden], .actions[hidden] { display: none; }
 .btn-secondary[aria-pressed="true"] { background: var(--fg); color: var(--bg); }

@@ -20,7 +20,7 @@
 <div class="brand pixel">leakcheck<span class="brand-cursor" aria-hidden="true">_</span></div>
 <nav class="nav" aria-label="Secciones" data-i18n-attr="aria-label:nav.sections">
 <a href="#browser" data-i18n="nav.browser">navegador</a>
-<a href="#connection" data-i18n="nav.connection">conexión</a>
+<a href="#connection" data-i18n="nav.connection">mi ip</a>
 <a href="#localnet" data-i18n="nav.localnet">red local</a>
 <a href="#fix-cta" data-i18n="nav.fix">soluciones</a>
 </nav>
@@ -42,9 +42,6 @@
 <p class="hero-prompt" data-i18n="hero.prompt">$ leakcheck --scan --local-only</p>
 <h1 id="hero-title"><span data-i18n="hero.title">¿qué le cuenta tu dispositivo a cada sitio web?</span><span class="cursor" aria-hidden="true"></span></h1>
 <p class="lead" data-i18n="hero.lead">Las pruebas se ejecutan en tu navegador. Los resultados nunca salen de esta pestaña, y no se guarda nada al cerrarla.</p>
-<div class="actions">
-<button type="button" class="btn" id="run-scan" data-i18n="scan.run">INICIAR EL ANÁLISIS</button>
-</div>
 </section>
 
 <section class="summary" id="results" tabindex="-1" aria-labelledby="results-title">
@@ -58,17 +55,29 @@
 <h2 id="browser-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.browser.title">tu navegador</span></h2>
 <p class="block-sub" data-i18n="section.browser.sub">cualquier página lo lee, sin pedir permiso</p>
 </div>
+<div class="action-box">
+<p data-i18n="scan.intro">Al pulsar el botón se lee lo que este navegador muestra a cada página que visitas. Nada sale de esta pestaña.</p>
+<button type="button" class="btn" id="run-scan" data-i18n="scan.run">INICIAR EL ANÁLISIS</button>
+</div>
 <ul class="findings"></ul>
 </section>
 
 <section class="block" id="connection" aria-labelledby="connection-title">
 <div class="block-head">
-<h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">tu conexión</span></h2>
+<h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">comprobar mi dirección ip</span></h2>
 <p class="block-sub" data-i18n="section.connection.sub">solo se ejecuta al hacer clic y solo contacta con el servidor de leakcheck</p>
 </div>
 <div class="action-box">
-<p data-i18n="connection.intro">Al pulsar el botón se envían unas pocas solicitudes al servidor de leakcheck y a ningún otro sitio. Lee la dirección desde la que llega tu conexión y la busca en su propia copia de una base de datos de IP. No se guarda nada.</p>
-<button type="button" class="btn" id="run-connection" data-i18n="connection.run">COMPROBAR MI CONEXIÓN</button>
+<p data-i18n="connection.intro">Al pulsar el botón se envían unas pocas solicitudes al servidor de leakcheck y a ningún otro sitio. Lee la dirección desde la que llega tu conexión, la busca en su propia copia de una base de datos de IP y pregunta a WebRTC qué direcciones comparte. No se guarda nada.</p>
+<fieldset class="threats" role="radiogroup" aria-labelledby="vpn-legend">
+<legend class="threats-legend" id="vpn-legend" data-i18n="connection.vpn.legend">¿usas una VPN ahora mismo?</legend>
+<div class="threat-options">
+<label class="threat"><input type="radio" name="vpn" value="yes" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="connection.vpn.yes">sí, tengo una VPN activada</span></span></label>
+<label class="threat"><input type="radio" name="vpn" value="no" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="connection.vpn.no">sin VPN</span></span></label>
+</div>
+</fieldset>
+<p id="vpn-hint" data-i18n="connection.vpn.hint">Responde primero a la pregunta y luego pulsa COMPROBAR MI IP.</p>
+<button type="button" class="btn" id="run-connection" aria-disabled="true" aria-describedby="vpn-hint" data-i18n="connection.run">COMPROBAR MI IP</button>
 </div>
 <ul class="findings"></ul>
 <div class="actions" id="connection-tools" hidden>

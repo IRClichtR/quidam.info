@@ -24,7 +24,8 @@ for (const lang of ['fr', 'es']) {
     await page.goto(`${BASE}/${lang}/`);
     await page.locator(`html[data-i18n-ready="${lang}"]`).waitFor();
     await page.locator('#run-scan').click();
-    await expect(page.locator('#browser li')).toHaveCount(10, { timeout: 10_000 });
+    await expect(page.locator('#browser li')).toHaveCount(9, { timeout: 10_000 });
+    await page.locator('#connection input[name="vpn"][value="yes"]').check();
     await page.locator('#run-connection').click();
     await expect(page.locator('#connection .findings > li').first()).toBeVisible({ timeout: 10_000 });
     await page.locator('#run-localnet').click();
@@ -50,7 +51,7 @@ for (const lang of ['fr', 'es']) {
       return { bad: out, checked: n };
     });
     expect(bad).toEqual([]);
-    // Ten browser rows, the connection and network rows, seven fix cards with their tags and buttons.
+    // Nine browser rows, the connection and network rows, seven fix cards with their tags and buttons.
     expect(checked).toBeGreaterThan(40);
   });
 }

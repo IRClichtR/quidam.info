@@ -18,7 +18,6 @@ const base = {
   audio: ['cccccccc', 'dddddddd'],
   cores: 4,
   memory: undefined,
-  localCandidates: ['a1b2.local'],
   gpc: true,
 };
 
@@ -38,11 +37,11 @@ beforeAll(async () => {
 });
 
 describe('judgeBrowser', () => {
-  it('lists the ten findings in the spec table order', () => {
-    expect(judge({}).map((f) => f.id)).toEqual(['screen', 'timezone', 'languages', 'gpu', 'fonts', 'canvas', 'audio', 'cpu', 'webrtcLocal', 'gpc']);
+  it('lists the nine findings in the spec table order (the local IP moved to the connection section)', () => {
+    expect(judge({}).map((f) => f.id)).toEqual(['screen', 'timezone', 'languages', 'gpu', 'fonts', 'canvas', 'audio', 'cpu', 'gpc']);
   });
   it('all OK for a browser that hides everything', () => {
-    expect(judge({}).map((f) => f.verdict)).toEqual(Array(10).fill('ok'));
+    expect(judge({}).map((f) => f.verdict)).toEqual(Array(9).fill('ok'));
   });
   it('screen OK when the screen equals the window inner size', () => {
     expect(v(judge({ screen: { w: 1000, h: 900, innerW: 1000, innerH: 900, dpr: 2 } }), 'screen')).toBe('ok');
@@ -92,13 +91,6 @@ describe('judgeBrowser', () => {
     expect(v(judge({ cores: 8, memory: undefined }), 'cpu')).toBe('ok');
     expect(v(judge({ cores: 8, memory: 8 }), 'cpu')).toBe('leak');
   });
-  it('webrtc local IP OK when only .local names or WebRTC off', () => {
-    expect(v(judge({ localCandidates: ['a1b2.local'] }), 'webrtcLocal')).toBe('ok');
-    expect(v(judge({ localCandidates: [] }), 'webrtcLocal')).toBe('ok');
-    expect(v(judge({ localCandidates: null }), 'webrtcLocal')).toBe('ok');
-    expect(v(judge({ localCandidates: ['192.168.1.23'] }), 'webrtcLocal')).toBe('leak');
-    expect(v(judge({ localCandidates: ['a1b2.local', '10.0.0.5'] }), 'webrtcLocal')).toBe('leak');
-  });
   it('GPC OK only when the browser sends it', () => {
     expect(v(judge({ gpc: true }), 'gpc')).toBe('ok');
     expect(v(judge({ gpc: false }), 'gpc')).toBe('leak');
@@ -110,7 +102,7 @@ describe('judgeBrowser', () => {
       timeZone: 'Asia/Kolkata', offsetMin: 330,
       languages: ['fr-FR', 'fr', 'en-US'],
       gpu: 'Apple M2', fontCount: 17, canvas: ['a3f90b7e', 'a3f90b7e'],
-      cores: 8, memory: 8, localCandidates: ['192.168.1.23'], gpc: false,
+      cores: 8, memory: 8, gpc: false,
     });
     expect(find(f, 'screen').value).toContain('2560 × 1440');
     expect(find(f, 'timezone').value).toBe('Asia/Kolkata (UTC+5:30)');
@@ -119,7 +111,6 @@ describe('judgeBrowser', () => {
     expect(find(f, 'fonts').value).toContain('17');
     expect(find(f, 'canvas').value).toContain('a3f90b7e');
     expect(find(f, 'cpu').value).toContain('8');
-    expect(find(f, 'webrtcLocal').value).toContain('192.168.1.23');
     expect(judge({ timeZone: 'America/Sao_Paulo', offsetMin: -180 }).find((x) => x.id === 'timezone')?.value).toBe('America/Sao_Paulo (UTC-3)');
   });
   it('formats numbers for the page language', () => {
@@ -128,7 +119,7 @@ describe('judgeBrowser', () => {
     expect(judgeBrowser({ ...base, fontCount: 1234 }, t, 'de').find((x) => x.id === 'fonts')?.value).toBe('1.234 of 30 detected');
   });
   it('never shows "undefined"', () => {
-    const f = judge({ cores: undefined, memory: undefined, audio: null, canvas: 'unknown', gpc: undefined, gpu: null, localCandidates: null, languages: [] });
+    const f = judge({ cores: undefined, memory: undefined, audio: null, canvas: 'unknown', gpc: undefined, gpu: null, languages: [] });
     for (const x of f) {
       expect(x.value, x.id).not.toMatch(/undefined|null|NaN/);
       expect(x.value.trim(), x.id).not.toBe('');

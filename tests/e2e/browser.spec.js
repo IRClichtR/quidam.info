@@ -8,14 +8,14 @@ async function scan(page, lang = 'en') {
   await page.goto(`${BASE}/${lang}/`);
   await page.locator(`html[data-i18n-ready="${lang}"]`).waitFor();
   await page.locator('#run-scan').click();
-  await expect(page.locator('#browser li')).toHaveCount(10, { timeout: 10_000 });
+  await expect(page.locator('#browser li')).toHaveCount(9, { timeout: 10_000 });
   await expect(page.locator('#announce')).not.toBeEmpty();
 }
 
-test('a scan fills ten rows, each with a tag', async ({ page }) => {
+test('a scan fills nine rows, each with a tag', async ({ page }) => {
   await scan(page);
   const rows = page.locator('#browser li');
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 9; i++) {
     const row = rows.nth(i);
     await expect(row.locator('.tag')).toHaveCount(1);
     await expect(row.locator('.row-value')).not.toBeEmpty();
@@ -33,7 +33,7 @@ test('the announcement and the tiles sum up the scan', async ({ page }) => {
   const leak = Number(await page.locator('#results .tile-leak span').textContent());
   const ok = Number(await page.locator('#results .tile-ok span').textContent());
   const unknown = await page.locator('#browser .tag-unknown').count();
-  expect(leak + ok + unknown).toBe(10);
+  expect(leak + ok + unknown).toBe(9);
   expect(await page.locator('#browser .tag-leak').count()).toBe(leak);
   await expect(page.locator('#announce')).toHaveText(`Scan finished: ${leak} leaking, ${ok} protected.`);
   await expect(tiles.nth(2)).toContainText(/blends in|fairly distinctive|likely unique/);
@@ -51,9 +51,9 @@ test('no request leaves our server during the scan', async ({ page }) => {
 });
 
 test('clicks during a scan are ignored', async ({ page }) => {
-  // Hold WebRTC gathering so the scan lasts its full 2 s timeout.
+  // Hold audio rendering so the scan lasts its full 2 s timeout.
   await page.addInitScript(() => {
-    RTCPeerConnection.prototype.createOffer = () => new Promise(() => {});
+    OfflineAudioContext.prototype.startRendering = () => new Promise(() => {});
   });
   await page.goto(BASE + '/en/');
   await page.locator('html[data-i18n-ready="en"]').waitFor();
@@ -76,7 +76,7 @@ test('clicks during a scan are ignored', async ({ page }) => {
   expect(await page.evaluate(() => /** @type {any} */ (window).__runs)).toBe(1);
   expect(await page.evaluate(() => /** @type {any} */ (window).__disabled)).toBe(true);
   await expect(page.locator('#run-scan')).not.toHaveAttribute('aria-disabled', 'true');
-  await expect(page.locator('#browser li')).toHaveCount(10);
+  await expect(page.locator('#browser li')).toHaveCount(9);
 });
 
 test('a row opens and closes its explanation with the keyboard', async ({ page }) => {
@@ -96,20 +96,6 @@ test('a row opens and closes its explanation with the keyboard', async ({ page }
   await page.keyboard.press('Enter');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(panel).toBeHidden();
-});
-
-test.describe('without WebRTC', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      delete (/** @type {any} */ (window)).RTCPeerConnection;
-    });
-  });
-  test('the scan finishes and the local IP finding is OK', async ({ page }) => {
-    await scan(page);
-    const row = page.locator('#browser li[data-finding="webrtcLocal"]');
-    await expect(row.locator('.tag-ok')).toHaveCount(1);
-    await expect(row.locator('.row-value')).toHaveText('WebRTC off');
-  });
 });
 
 test.describe('without crypto.subtle (plain http on a LAN address)', () => {

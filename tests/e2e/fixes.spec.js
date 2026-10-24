@@ -145,6 +145,7 @@ test('RESCAN TO VERIFY shows before and after counts and reruns only the checks 
   await open(page);
   await page.locator('#run-scan').click();
   await expect(page.locator('#announce')).toContainText('Scan finished');
+  await page.locator('#connection input[name="vpn"][value="no"]').check();
   await page.locator('#run-connection').click();
   await expect(page.locator('#announce')).toContainText('Connection check finished');
   const whoamiBefore = requested.filter((u) => u.includes('/api/whoami')).length;

@@ -7,9 +7,8 @@ import { loadStrings, t, tList } from './i18n.js';
 import { collectBrowser, judgeBrowser } from './browser.js';
 import { renderFindings, renderSummary, announce, el } from './render.js';
 import { state } from './state.js';
-import { fetchWhoami, gatherSrflx, judgeConnection, compareVpnOff, stunUrls, primaryLookup } from './connection.js';
+import { fetchWhoami, gatherIce, judgeConnection, compareVpnOff, stunUrls, primaryLookup, isLocalIp } from './connection.js';
 import { probeRouters, permissionState, probeTimeout, judgeLocalnet } from './localnet.js';
-import zoneCountries from './tz-countries.js';
 import { FIXES, orderFixes, detectBrowser, buildFixCards, rescanText } from './fixes.js';
 
 const root = document.documentElement;
@@ -82,24 +81,62 @@ const vpnOffBox = /** @type {HTMLElement} */ (document.getElementById('vpn-off-b
 const vpnOffResult = /** @type {HTMLElement} */ (document.getElementById('vpn-off-result'));
 const tools = /** @type {HTMLElement} */ (document.getElementById('connection-tools'));
 const connList = /** @type {HTMLUListElement} */ (document.querySelector('#connection .findings'));
+const vpnHint = /** @type {HTMLElement} */ (document.getElementById('vpn-hint'));
+const vpnRadios = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('#connection input[name="vpn"]'));
 let checking = false;
 
-/** Draw the connection rows, masked unless reveal is pressed. */
-function drawConnection() {
-  if (!state.connectionInput) return;
-  const reveal = revealBtn.getAttribute('aria-pressed') === 'true';
-  state.connection = judgeConnection({ ...state.connectionInput, reveal }, t);
-  renderFindings(connList, state.connection, t);
+/** The visitor's answer to "are you using a VPN?": true, false, or null before they answer. */
+function usesVpn() {
+  const picked = [...vpnRadios].find((r) => r.checked);
+  return picked ? picked.value === 'yes' : null;
 }
 
-/** Ask our own server for the address on this origin and on the single-family origins, and run STUN. */
+/** Draw the connection rows from the saved input and the current answer, masked unless reveal is pressed. */
+function drawConnection() {
+  const input = state.connectionInput;
+  const vpn = usesVpn();
+  if (!input || vpn === null) return;
+  const reveal = revealBtn.getAttribute('aria-pressed') === 'true';
+  state.connection = judgeConnection({ ...input, usesVpn: vpn, vpnOff: state.vpnOff, reveal }, t);
+  renderFindings(connList, state.connection, t);
+  const who = primaryLookup(input.main, input.v4, input.v6);
+  tools.hidden = who === null;
+  // The VPN-off check is only for visitors with a VPN, and makes no sense for Tor or Private
+  // Relay, which hide the address on purpose, or for a local address (testing on this machine).
+  vpnOffBox.hidden = !vpn || who === null || who.tor || who.privateRelay || isLocalIp(who.ip);
+}
+
+// The check button works only once the visitor has answered, because the answer decides the verdicts.
+// Changing the answer later re-judges the rows on the spot, without asking the server again.
+for (const radio of vpnRadios) {
+  radio.addEventListener('change', () => {
+    // The hint is gone, so the button stops pointing to it (screen readers read hidden text too).
+    vpnHint.hidden = true;
+    connBtn.removeAttribute('aria-describedby');
+    if (!checking) connBtn.removeAttribute('aria-disabled');
+    if (!state.connectionInput) return;
+    drawConnection();
+    updateSummary();
+  });
+}
+
+/** Ask our own server for the address on this origin and on the single-family origins, and run WebRTC. */
 async function runConnection() {
   if (checking) return;
+  // Not answered yet: lead the visitor to the question instead of doing nothing.
+  if (usesVpn() === null) {
+    vpnRadios[0].focus();
+    announce(t('connection.vpn.hint'));
+    return;
+  }
   checking = true;
   state.ran.connection = true;
   connBtn.setAttribute('aria-disabled', 'true');
-  // An old VPN-off answer would describe the previous check.
+  // The previous VPN-off answer is kept only if this check sees the same address (see below).
+  const before = state.checked;
+  const kept = { vpnOff: state.vpnOff, text: vpnOffResult.textContent };
   vpnOffResult.textContent = '';
+  state.vpnOff = null;
   announce(t('connection.running'));
   try {
     // /api/origins gives the IPv4-only and IPv6-only hostnames and the STUN port.
@@ -108,25 +145,25 @@ async function runConnection() {
     const origins = originsRes?.ok ? await originsRes.json().catch(() => null) : null;
     state.origins = origins;
     // All lookups run together. The v4/v6 lookups use single-family hostnames so we know the
-    // address for each family; STUN asks which public addresses WebRTC exposes.
-    const [main, v4, v6, srflx] = await Promise.all([
+    // address for each family; WebRTC asks our STUN server which public addresses it exposes,
+    // and lists the local ones (with no origins, only the local ones: no server is asked).
+    const [main, v4, v6, ice] = await Promise.all([
       fetchWhoami(''),
       origins ? fetchWhoami(origins.v4) : null,
       origins ? fetchWhoami(origins.v6) : null,
-      origins ? gatherSrflx(stunUrls(origins)).catch(() => null) : null,
+      gatherIce(origins ? stunUrls(origins) : []).catch(() => null),
     ]);
-    // Kept so 'reveal' can redraw the same findings without asking the network again.
-    state.connectionInput = {
-      main, v4, v6, srflx, zoneCountries,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    };
-    drawConnection();
+    // Kept so 'reveal' and a changed answer can redraw the findings without asking the network again.
+    state.connectionInput = { main, v4, v6, ice };
     const who = primaryLookup(main, v4, v6);
-    // `??=` keeps the very first address seen, to compare with after the visitor turns the VPN off.
-    if (who) state.first ??= { ip: who.ip, family: who.family };
-    tools.hidden = who === null;
-    // The VPN-off check makes no sense for Tor or Private Relay, which hide the address on purpose.
-    vpnOffBox.hidden = who === null || who.tor || who.privateRelay;
+    // The address of this check is what the VPN-off check compares with. If it hasn't changed
+    // since the last check (a rescan, say), the earlier VPN-off answer still holds.
+    state.checked = who ? { ip: who.ip, family: who.family } : null;
+    if (before && state.checked && compareVpnOff(before, state.checked) === 'same') {
+      state.vpnOff = kept.vpnOff;
+      vpnOffResult.textContent = kept.text;
+    }
+    drawConnection();
     updateSummary();
     announce(t('connection.done', counts(state.connection)));
   } catch {
@@ -146,7 +183,7 @@ revealBtn.addEventListener('click', () => {
 
 let rechecking = false;
 vpnOffBtn.addEventListener('click', async () => {
-  const first = state.first;
+  const first = state.checked;
   if (rechecking || !first) return;
   rechecking = true;
   vpnOffBtn.setAttribute('aria-disabled', 'true');
@@ -163,6 +200,11 @@ vpnOffBtn.addEventListener('click', async () => {
     after ??= main;
     const failed = lookups.includes('busy') ? 'finding.publicIp.busy' : 'connection.vpnOff.failed';
     vpnOffResult.textContent = after ? t(`connection.vpnOff.${compareVpnOff(first, after)}`) : t(failed);
+    // The comparison decides the public IP, provider, location and VPN rows, so redraw them.
+    // With no answer, the rows go back to CAN'T TELL rather than keep an older comparison.
+    state.vpnOff = after ? compareVpnOff(first, after) : null;
+    drawConnection();
+    updateSummary();
   } finally {
     rechecking = false;
     vpnOffBtn.removeAttribute('aria-disabled');
@@ -252,7 +294,7 @@ rescanBtn.addEventListener('click', async () => {
   rescanning = true;
   rescanBtn.setAttribute('aria-disabled', 'true');
   rescanResult.textContent = '';
-  vpnOffResult.textContent = '';
+  // The VPN-off result is not cleared here: the connection rerun keeps it if the address is unchanged.
   // The 'before' count is taken now, before the rescan replaces the findings.
   const before = state.browser.length ? leaking() : null;
   try {
