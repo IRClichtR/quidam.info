@@ -163,6 +163,20 @@ test('the VPN-off recheck says "different" when the second lookup changed', asyn
   await expect(page.locator('#vpn-off-result')).toHaveText('different: your VPN hides your IP');
 });
 
+test('the VPN-off recheck never compares across address families', async ({ page }) => {
+  await cannedWhoami(page, (u) => (u.hostname === 'ip6-localhost' ? V6 : V4));
+  await open(page);
+  await check(page);
+  // Second round: the main lookup now answers over IPv6, and so does the IPv4 origin (no IPv4 left).
+  await page.unroute('**/api/whoami');
+  /** @type {string[]} */
+  const asked = [];
+  await cannedWhoami(page, (u) => { asked.push(u.href); return { ...V6, ip: '2001:db8::9' }; });
+  await page.locator('#vpn-off').click();
+  await expect(page.locator('#vpn-off-result')).toHaveText("can't compare (different address type)");
+  expect(asked).toEqual([BASE + '/api/whoami', 'http://127.0.0.1:8080/api/whoami']);
+});
+
 test('the summary counts browser and connection findings together', async ({ page }) => {
   await cannedWhoami(page);
   await open(page);

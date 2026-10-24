@@ -55,10 +55,12 @@ export function buildBindingResponse(transactionId, address, port) {
 }
 
 /**
- * @param {{port: number, limiter: {hit(key: string): boolean}}} opts
+ * `mapAddress` turns the sender's address into the one to report (development override only);
+ * the rate limit always uses the real sender.
+ * @param {{port: number, limiter: {hit(key: string): boolean}, mapAddress?: (address: string) => string}} opts
  * @returns {Promise<{close(): Promise<void>, ports: {udp4: number, udp6: number|null}}>}
  */
-export async function startStun({ port, limiter }) {
+export async function startStun({ port, limiter, mapAddress = (a) => a }) {
   /** @param {dgram.Socket} sock */
   function handle(sock) {
     sock.on('error', () => {});
@@ -67,7 +69,7 @@ export async function startStun({ port, limiter }) {
       if (!parsed) return;
       const address = rinfo.address.replace(/^::ffff:/i, '');
       if (!limiter.hit(address)) return;
-      sock.send(buildBindingResponse(parsed.transactionId, address, rinfo.port), rinfo.port, rinfo.address, () => {});
+      sock.send(buildBindingResponse(parsed.transactionId, mapAddress(address), rinfo.port), rinfo.port, rinfo.address, () => {});
     });
   }
 

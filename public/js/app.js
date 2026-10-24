@@ -3,7 +3,7 @@ import { loadStrings, t } from './i18n.js';
 import { collectBrowser, judgeBrowser } from './browser.js';
 import { renderFindings, renderSummary, announce } from './render.js';
 import { state } from './state.js';
-import { fetchWhoami, gatherSrflx, judgeConnection, compareVpnOff, stunUrls } from './connection.js';
+import { fetchWhoami, gatherSrflx, judgeConnection, compareVpnOff, stunUrls, primaryLookup } from './connection.js';
 import zoneCountries from './tz-countries.js';
 
 const root = document.documentElement;
@@ -80,14 +80,6 @@ function drawConnection() {
   renderFindings(connList, state.connection, t);
 }
 
-/** The public address from a lookup set: the main one, else either family. */
-function publicIp() {
-  const input = state.connectionInput;
-  if (!input) return null;
-  for (const l of [input.main, input.v4, input.v6]) if (l && l !== 'unavailable') return l;
-  return null;
-}
-
 /** Ask our own server for the address on this origin and on the single-family origins, and run STUN. */
 async function runConnection() {
   if (checking) return;
@@ -98,6 +90,7 @@ async function runConnection() {
     const originsRes = await fetch('/api/origins', { credentials: 'omit', cache: 'no-store' }).catch(() => null);
     /** @type {import('./connection.js').Origins|null} */
     const origins = originsRes?.ok ? await originsRes.json().catch(() => null) : null;
+    state.origins = origins;
     const [main, v4, v6, srflx] = await Promise.all([
       fetchWhoami(''),
       origins ? fetchWhoami(origins.v4) : null,
@@ -109,8 +102,8 @@ async function runConnection() {
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
     drawConnection();
-    const who = publicIp();
-    state.firstIp ??= who?.ip ?? null;
+    const who = primaryLookup(main, v4, v6);
+    if (who) state.first ??= { ip: who.ip, family: who.family };
     tools.hidden = who === null;
     vpnOffBox.hidden = who === null || who.tor || who.privateRelay;
     updateSummary();
@@ -131,15 +124,20 @@ revealBtn.addEventListener('click', () => {
 
 let rechecking = false;
 vpnOffBtn.addEventListener('click', async () => {
-  if (rechecking || !state.firstIp) return;
+  const first = state.first;
+  if (rechecking || !first) return;
   rechecking = true;
   vpnOffBtn.setAttribute('aria-disabled', 'true');
   vpnOffResult.textContent = '';
   try {
-    const after = await fetchWhoami('');
-    vpnOffResult.textContent = after && after !== 'unavailable'
-      ? t(`connection.vpnOff.${compareVpnOff(state.firstIp, after.ip)}`)
-      : t('connection.vpnOff.failed');
+    // Compare like with like: the main lookup if it has the first address's family, else that family's origin.
+    const main = primaryLookup(await fetchWhoami(''), null, null);
+    let after = main?.family === first.family ? main : null;
+    if (!after && state.origins) {
+      after = primaryLookup(await fetchWhoami(first.family === 4 ? state.origins.v4 : state.origins.v6), null, null);
+    }
+    after ??= main;
+    vpnOffResult.textContent = after ? t(`connection.vpnOff.${compareVpnOff(first, after)}`) : t('connection.vpnOff.failed');
   } finally {
     rechecking = false;
     vpnOffBtn.removeAttribute('aria-disabled');

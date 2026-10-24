@@ -9,6 +9,7 @@ import { createWhoamiHandler } from './whoami.js';
 import { createRateLimiter } from './ratelimit.js';
 import { createApp } from './app.js';
 import { startStun } from './stun.js';
+import { isIPv4 } from 'node:net';
 
 const cfg = loadConfig(process.env);
 
@@ -38,6 +39,8 @@ await new Promise((resolve, reject) => {
 const stun = await startStun({
   port: cfg.stunPort,
   limiter: createRateLimiter({ limit: 60, windowMs: 60_000 }),
+  // Development only: report the same override address as /api/whoami, so the VPN check compares like with like.
+  mapAddress: (address) => (cfg.dev ? (isIPv4(address) ? cfg.devClientIp4 : cfg.devClientIp6) ?? address : address),
 });
 
 const addr = server.address();

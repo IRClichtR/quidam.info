@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { loadStrings, t } from '../../public/js/i18n.js';
 import {
-  maskIp, judgeConnection, compareVpnOff, fetchWhoami, gatherSrflx, stunUrls,
+  maskIp, judgeConnection, compareVpnOff, fetchWhoami, gatherSrflx, stunUrls, primaryLookup,
 } from '../../public/js/connection.js';
 import zoneCountries from '../../public/js/tz-countries.js';
 
@@ -18,7 +18,7 @@ const ZONES = { 'Europe/Paris': ['FR', 'MC'], 'Europe/London': ['GB', 'GG', 'IM'
 
 /** @param {Partial<Parameters<typeof judgeConnection>[0]>} over */
 const judge = (over) => judgeConnection({
-  main: who(), v4: who(), v6: V6, srflx: { v4: null, v6: null }, timeZone: 'Europe/Paris', zoneCountries: ZONES, ...over,
+  main: who(), v4: who(), v6: V6, srflx: { v4: [], v6: [] }, timeZone: 'Europe/Paris', zoneCountries: ZONES, ...over,
 }, t);
 /** @param {import('../../public/js/browser.js').Finding[]} fs @param {string} id */
 const find = (fs, id) => fs.find((f) => f.id === id);
@@ -48,7 +48,7 @@ describe('judgeConnection', () => {
   });
 
   it('reveal shows the full addresses', () => {
-    const fs = judgeConnection({ main: who(), v4: who(), v6: V6, srflx: { v4: '81.2.69.142', v6: null },
+    const fs = judgeConnection({ main: who(), v4: who(), v6: V6, srflx: { v4: ['81.2.69.142'], v6: [] },
       timeZone: 'Europe/Paris', zoneCountries: ZONES, reveal: true }, t);
     expect(find(fs, 'publicIp')?.value).toContain('81.2.69.142');
     expect(find(fs, 'vpn4')?.value).toContain('81.2.69.142');
@@ -73,24 +73,30 @@ describe('judgeConnection', () => {
   });
 
   it('vpn: LEAK when WebRTC shows another address of the same family', () => {
-    const fs = judge({ v4: who({ ip: '198.51.100.7' }), srflx: { v4: '203.0.113.42', v6: null } });
+    const fs = judge({ v4: who({ ip: '198.51.100.7' }), srflx: { v4: ['203.0.113.42'], v6: [] } });
+    expect(find(fs, 'vpn4')?.verdict).toBe('leak');
+    expect(find(fs, 'vpn4')?.value).toContain('203.0.113.•••');
+  });
+
+  it('vpn: LEAK when one interface matches and another shows a different address', () => {
+    const fs = judge({ srflx: { v4: ['81.2.69.142', '203.0.113.42'], v6: [] } });
     expect(find(fs, 'vpn4')?.verdict).toBe('leak');
     expect(find(fs, 'vpn4')?.value).toContain('203.0.113.•••');
   });
 
   it('vpn: OK when WebRTC shows the same address', () => {
-    const fs = judge({ srflx: { v4: '81.2.69.142', v6: '2001:480:10::1' } });
+    const fs = judge({ srflx: { v4: ['81.2.69.142'], v6: ['2001:480:10::1'] } });
     expect(find(fs, 'vpn4')?.verdict).toBe('ok');
     expect(find(fs, 'vpn6')?.verdict).toBe('ok');
   });
 
   it('vpn: IPv6 written differently is still the same address', () => {
-    const fs = judge({ v6: who({ ip: '2001:db8::5', family: 6 }), srflx: { v4: null, v6: '2001:0DB8:0:0::5' } });
+    const fs = judge({ v6: who({ ip: '2001:db8::5', family: 6 }), srflx: { v4: [], v6: ['2001:0DB8:0:0::5'] } });
     expect(find(fs, 'vpn6')?.verdict).toBe('ok');
   });
 
   it('vpn: "no leak observable" when no srflx came back, or WebRTC is missing', () => {
-    for (const srflx of [{ v4: null, v6: null }, null]) {
+    for (const srflx of [{ v4: [], v6: [] }, null]) {
       const fs = judge({ srflx });
       for (const id of ['vpn4', 'vpn6']) {
         expect(find(fs, id)).toMatchObject({ verdict: 'unknown', value: 'no leak observable' });
@@ -101,7 +107,7 @@ describe('judgeConnection', () => {
   it('vpn: a family whose lookup failed is left out', () => {
     expect(find(judge({ v6: null }), 'vpn6')).toBeUndefined();
     expect(find(judge({ v6: null }), 'vpn4')).toBeDefined();
-    expect(find(judge({ v4: null, srflx: { v4: '203.0.113.42', v6: null } }), 'vpn4')).toBeUndefined();
+    expect(find(judge({ v4: null, srflx: { v4: ['203.0.113.42'], v6: [] } }), 'vpn4')).toBeUndefined();
     expect(find(judge({ v6: 'unavailable' }), 'vpn6')).toBeUndefined();
   });
 
@@ -136,8 +142,27 @@ describe('judgeConnection', () => {
 });
 
 describe('compareVpnOff', () => {
-  it('different addresses mean the VPN hides the IP', () => expect(compareVpnOff('1.1.1.1', '2.2.2.2')).toBe('hidden'));
-  it('the same address means it does not', () => expect(compareVpnOff('1.1.1.1', '1.1.1.1')).toBe('same'));
+  const a = { ip: '1.1.1.1', family: /** @type {4} */ (4) };
+  it('different addresses mean the VPN hides the IP', () => expect(compareVpnOff(a, { ip: '2.2.2.2', family: 4 })).toBe('hidden'));
+  it('the same address means it does not', () => expect(compareVpnOff(a, { ...a })).toBe('same'));
+  it('the same IPv6 address written differently is the same', () => {
+    expect(compareVpnOff({ ip: '2001:db8::5', family: 6 }, { ip: '2001:DB8:0::5', family: 6 })).toBe('same');
+  });
+  it('addresses of different families cannot be compared', () => {
+    expect(compareVpnOff(a, { ip: '2001:db8::5', family: 6 })).toBe('otherFamily');
+  });
+  it('says so in plain words', () => {
+    expect(t('connection.vpnOff.otherFamily')).toBe("can't compare (different address type)");
+  });
+});
+
+describe('primaryLookup', () => {
+  it('is the main lookup, else IPv4, else IPv6, else null', () => {
+    expect(primaryLookup(who({ ip: '9.9.9.9' }), who(), V6)?.ip).toBe('9.9.9.9');
+    expect(primaryLookup('unavailable', who(), V6)?.ip).toBe('81.2.69.142');
+    expect(primaryLookup(null, null, V6)?.ip).toBe('2001:480:10::1');
+    expect(primaryLookup(null, 'unavailable', null)).toBeNull();
+  });
 });
 
 describe('stunUrls', () => {
@@ -216,7 +241,7 @@ describe('gatherSrflx', () => {
       { candidate: null },
     ]);
     const urls = ['stun:127.0.0.1:3478', 'stun:ip6-localhost:3478'];
-    expect(await gatherSrflx(urls)).toEqual({ v4: '203.0.113.42', v6: '2001:db8::5' });
+    expect(await gatherSrflx(urls)).toEqual({ v4: ['203.0.113.42'], v6: ['2001:db8::5'] });
     expect(log.config).toEqual({ iceServers: [{ urls }] });
     expect(log.channel).not.toBe('');
     expect(log.closed).toBe(true);
@@ -224,13 +249,13 @@ describe('gatherSrflx', () => {
 
   it('drops the brackets Chromium puts around IPv6 addresses', async () => {
     fakePc([{ candidate: { type: 'srflx', address: '[2001:db8::5]', candidate: 'candidate:3 1 udp 1 2001:db8::5 6001 typ srflx raddr :: rport 0' } }]);
-    expect(await gatherSrflx(['stun:ip6-localhost:3478'])).toEqual({ v4: null, v6: '2001:db8::5' });
+    expect(await gatherSrflx(['stun:ip6-localhost:3478'])).toEqual({ v4: [], v6: ['2001:db8::5'] });
   });
 
   it('stops at the timeout and still closes the connection', async () => {
     const log = fakePc([], { complete: false });
     const started = Date.now();
-    expect(await gatherSrflx(['stun:127.0.0.1:3478'], 50)).toEqual({ v4: null, v6: null });
+    expect(await gatherSrflx(['stun:127.0.0.1:3478'], 50)).toEqual({ v4: [], v6: [] });
     expect(Date.now() - started).toBeLessThan(1000);
     expect(log.closed).toBe(true);
   });
@@ -245,5 +270,11 @@ describe('tz-countries', () => {
   it('table generated from zone1970.tab', () => {
     expect(zoneCountries['Europe/Paris']).toContain('FR');
     expect(zoneCountries['America/New_York']).toEqual(['US']);
+  });
+  it('includes zone.tab names and backward links', () => {
+    expect(zoneCountries['Europe/Amsterdam']).toContain('NL');
+    expect(zoneCountries['Asia/Calcutta']).toContain('IN');
+    expect(zoneCountries['Europe/Oslo']).toContain('NO');
+    expect(zoneCountries.UTC).toBeUndefined();
   });
 });

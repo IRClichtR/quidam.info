@@ -6,7 +6,7 @@
 /** @typedef {{ ip: string, family: 4|6, country: string|null, city: string|null, asn: number|null,
  *   asOrg: string|null, tor: boolean, privateRelay: boolean }} Whoami */
 /** @typedef {Whoami|null|'unavailable'} Lookup */
-/** @typedef {{v4: string|null, v6: string|null}} Srflx */
+/** @typedef {{v4: string[], v6: string[]}} Srflx */
 /** @typedef {{v4: string, v6: string, stunPort: number}} Origins */
 
 /** @param {string} ip */
@@ -41,6 +41,15 @@ export function maskIp(ip) {
 /** @param {unknown} x @returns {x is Whoami} */
 function isWhoami(x) {
   return typeof x === 'object' && x !== null && typeof (/** @type {any} */ (x).ip) === 'string';
+}
+
+/**
+ * The lookup that stands for the visitor's public address: the main one, else IPv4, else IPv6.
+ * @param {Lookup} main @param {Lookup} v4 @param {Lookup} v6
+ * @returns {Whoami|null}
+ */
+export function primaryLookup(main, v4, v6) {
+  return [main, v4, v6].find(isWhoami) ?? null;
 }
 
 /**
@@ -80,7 +89,7 @@ export function stunUrls({ v4, v6, stunPort }) {
 }
 
 /**
- * The public addresses our STUN server saw, one per family, from server-reflexive candidates.
+ * Every public address our STUN server saw, by family, from server-reflexive candidates (one per interface).
  * @param {string[]} urls
  * @param {number} [timeoutMs]
  * @returns {Promise<Srflx|null>} null when WebRTC is missing or blocked
@@ -95,7 +104,7 @@ export async function gatherSrflx(urls, timeoutMs = 5000) {
     return null;
   }
   /** @type {Srflx} */
-  const found = { v4: null, v6: null };
+  const found = { v4: [], v6: [] };
   /** @type {ReturnType<typeof setTimeout>|undefined} */
   let timer;
   try {
@@ -109,8 +118,8 @@ export async function gatherSrflx(urls, timeoutMs = 5000) {
         // Chromium writes IPv6 addresses in brackets.
         const addr = (c.address ?? parts[4] ?? '').replace(/^\[(.*)\]$/, '$1');
         if (!addr) return;
-        if (isV4(addr)) found.v4 ??= addr;
-        else if (isV6(addr)) found.v6 ??= addr;
+        const list = isV4(addr) ? found.v4 : isV6(addr) ? found.v6 : null;
+        if (list && !list.some((a) => sameIp(a, addr))) list.push(addr);
       };
       pc.onicegatheringstatechange = () => {
         if (pc.iceGatheringState === 'complete') resolve(undefined);
@@ -136,7 +145,7 @@ export async function gatherSrflx(urls, timeoutMs = 5000) {
 export function judgeConnection({ main, v4, v6, srflx, timeZone, zoneCountries, reveal = false }, t) {
   /** @param {string} ip */
   const show = (ip) => (reveal ? ip : maskIp(ip));
-  const who = [main, v4, v6].find(isWhoami);
+  const who = primaryLookup(main, v4, v6);
   if (!who) {
     const unavailable = [main, v4, v6].includes('unavailable');
     return [{ id: 'publicIp', verdict: 'unknown', value: t(unavailable ? 'finding.publicIp.unavailable' : 'finding.publicIp.failed') }];
@@ -159,19 +168,23 @@ export function judgeConnection({ main, v4, v6, srflx, timeZone, zoneCountries, 
   ];
   for (const [id, lookup, seen] of /** @type {const} */ ([['vpn4', v4, srflx?.v4], ['vpn6', v6, srflx?.v6]])) {
     if (!isWhoami(lookup)) continue;
-    if (!seen) out.push({ id, verdict: 'unknown', value: t('finding.vpn.none') });
-    else if (sameIp(seen, lookup.ip)) out.push({ id, verdict: 'ok', value: t('finding.vpn.same', { ip: show(seen) }) });
-    else out.push({ id, verdict: 'leak', value: t('finding.vpn.other', { ip: show(seen) }) });
+    // Any interface showing another address is a leak, even if another one matches.
+    const other = (seen ?? []).filter((ip) => !sameIp(ip, lookup.ip));
+    if (!seen?.length) out.push({ id, verdict: 'unknown', value: t('finding.vpn.none') });
+    else if (!other.length) out.push({ id, verdict: 'ok', value: t('finding.vpn.same', { ip: show(lookup.ip) }) });
+    else out.push({ id, verdict: 'leak', value: t('finding.vpn.other', { ip: other.map(show).join(', ') }) });
   }
   return out;
 }
 
 /**
  * The VPN-off recheck: a different address with the VPN off means the VPN was hiding it.
- * @param {string} before
- * @param {string} after
- * @returns {'hidden'|'same'}
+ * Addresses of different families say nothing about each other.
+ * @param {{ip: string, family: 4|6}} before
+ * @param {{ip: string, family: 4|6}} after
+ * @returns {'hidden'|'same'|'otherFamily'}
  */
 export function compareVpnOff(before, after) {
-  return before === after ? 'same' : 'hidden';
+  if (before.family !== after.family) return 'otherFamily';
+  return sameIp(before.ip, after.ip) ? 'same' : 'hidden';
 }

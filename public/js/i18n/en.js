@@ -106,6 +106,7 @@ export default {
   'connection.vpnOff.run': 'CHECK AGAIN WITH VPN OFF',
   'connection.vpnOff.hidden': 'different: your VPN hides your IP',
   'connection.vpnOff.same': "same: your VPN isn't hiding your IP",
+  'connection.vpnOff.otherFamily': "can't compare (different address type)",
   'connection.vpnOff.failed': 'The second lookup did not answer. Try again.',
   'finding.unknown': 'unknown',
   'finding.publicIp.label': 'public ip',

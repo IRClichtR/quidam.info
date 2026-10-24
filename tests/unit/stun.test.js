@@ -107,6 +107,32 @@ describe('startStun', () => {
     }
   });
 
+  it('replies with the mapped address when given a mapper, keyed on the real sender', async () => {
+    /** @type {string[]} */
+    const keys = [];
+    const stun = await startStun({
+      port: 0,
+      limiter: { hit: (k) => { keys.push(k); return true; } },
+      mapAddress: (a) => (a === '127.0.0.1' ? '81.2.69.142' : a),
+    });
+    try {
+      const res = /** @type {Buffer} */ (await ask(stun.ports.udp4, request()));
+      expect(decode(res).address).toBe('81.2.69.142');
+      expect(keys).toEqual(['127.0.0.1']);
+    } finally {
+      await stun.close();
+    }
+  });
+
+  it('replies with the real source address by default (production)', async () => {
+    const stun = await startStun({ port: 0, limiter: createRateLimiter({ limit: 60, windowMs: 60_000 }) });
+    try {
+      expect(decode(/** @type {Buffer} */ (await ask(stun.ports.udp4, request()))).address).toBe('127.0.0.1');
+    } finally {
+      await stun.close();
+    }
+  });
+
   it('drops random bytes and stays up', async () => {
     const stun = await startStun({ port: 0, limiter: createRateLimiter({ limit: 1000, windowMs: 60_000 }) });
     try {
