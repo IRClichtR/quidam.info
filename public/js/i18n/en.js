@@ -84,7 +84,7 @@ export default {
   'finding.cpu.memory': '{n} GB',
   'finding.cpu.memoryHidden': 'memory hidden',
   'finding.cpu.why': 'The number of processor cores and the amount of memory narrow down which device you use.',
-  'finding.cpu.fix': 'Firefox, Safari, Mullvad Browser and Tor Browser do not share the memory size. Brave changes the values slightly.',
+  'finding.cpu.fix': 'Firefox, Safari, Mullvad Browser and Tor Browser do not share the memory size, so this row reads OK there. Chrome, Edge and Brave still report it, even when Brave changes the value slightly.',
   'finding.webrtcLocal.label': 'local ip via webrtc',
   'finding.webrtcLocal.hidden': 'hidden behind a .local name',
   'finding.webrtcLocal.off': 'WebRTC off',

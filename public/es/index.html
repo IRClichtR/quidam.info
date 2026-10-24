@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>leakcheck: what does your device tell every website?</title>
-<meta name="description" content="See, live, what your browser and connection reveal to every website, then get a ranked plan to reduce it. Runs in your browser; nothing is stored.">
+<title>leakcheck: ¿qué le cuenta tu dispositivo a cada sitio web?</title>
+<meta name="description" content="Mira, en directo, lo que tu navegador y tu conexión revelan a cada sitio web, y obtén un plan ordenado para reducirlo. Todo se ejecuta en tu navegador; no se guarda nada.">
 <link rel="alternate" hreflang="en" href="/en/">
 <link rel="alternate" hreflang="fr" href="/fr/">
 <link rel="alternate" hreflang="es" href="/es/">
@@ -13,24 +13,24 @@
 <script type="module" src="/js/app.js"></script>
 </head>
 <body>
-<a class="skip" id="skip" href="#results" data-i18n="skip">Skip to results</a>
+<a class="skip" id="skip" href="#results" data-i18n="skip">Ir a los resultados</a>
 
 <header class="site-header">
 <div class="wrap">
 <div class="brand pixel">leakcheck<span class="brand-cursor" aria-hidden="true">_</span></div>
-<nav class="nav" aria-label="Sections" data-i18n-attr="aria-label:nav.sections">
-<a href="#browser" data-i18n="nav.browser">browser</a>
-<a href="#connection" data-i18n="nav.connection">connection</a>
-<a href="#localnet" data-i18n="nav.localnet">local network</a>
-<a href="#fix-cta" data-i18n="nav.fix">fix it</a>
+<nav class="nav" aria-label="Secciones" data-i18n-attr="aria-label:nav.sections">
+<a href="#browser" data-i18n="nav.browser">navegador</a>
+<a href="#connection" data-i18n="nav.connection">conexión</a>
+<a href="#localnet" data-i18n="nav.localnet">red local</a>
+<a href="#fix-cta" data-i18n="nav.fix">soluciones</a>
 </nav>
 <div class="header-end">
-<nav class="picker" aria-label="Language" data-i18n-attr="aria-label:nav.language">
+<nav class="picker" aria-label="Idioma" data-i18n-attr="aria-label:nav.language">
 <a href="/en/" hreflang="en" lang="en" data-i18n="lang.en">English</a><span class="picker-sep" aria-hidden="true"> · </span><a href="/fr/" hreflang="fr" lang="fr" data-i18n="lang.fr">Français</a><span class="picker-sep" aria-hidden="true"> · </span><a href="/es/" hreflang="es" lang="es" aria-current="page" data-i18n="lang.es">Español</a>
 </nav>
 <div class="stored">
 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 2.5 3.8v4c0 3.3 2.3 5.6 5.5 6.7 3.2-1.1 5.5-3.4 5.5-6.7v-4Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-<span data-i18n="header.stored" data-n="0">0 bytes stored</span>
+<span data-i18n="header.stored" data-n="0">0 bytes guardados</span>
 </div>
 </div>
 </div>
@@ -40,100 +40,100 @@
 
 <section class="hero" aria-labelledby="hero-title">
 <p class="hero-prompt" data-i18n="hero.prompt">$ leakcheck --scan --local-only</p>
-<h1 id="hero-title"><span data-i18n="hero.title">what does your device tell every website?</span><span class="cursor" aria-hidden="true"></span></h1>
-<p class="lead" data-i18n="hero.lead">The tests run inside your browser. The results never leave this tab, and nothing is saved when you close it.</p>
+<h1 id="hero-title"><span data-i18n="hero.title">¿qué le cuenta tu dispositivo a cada sitio web?</span><span class="cursor" aria-hidden="true"></span></h1>
+<p class="lead" data-i18n="hero.lead">Las pruebas se ejecutan en tu navegador. Los resultados nunca salen de esta pestaña, y no se guarda nada al cerrarla.</p>
 <div class="actions">
-<button type="button" class="btn" id="run-scan" data-i18n="scan.run">RUN THE SCAN</button>
+<button type="button" class="btn" id="run-scan" data-i18n="scan.run">INICIAR EL ANÁLISIS</button>
 </div>
 </section>
 
 <section class="summary" id="results" tabindex="-1" aria-labelledby="results-title">
-<h2 class="label" id="results-title" data-i18n="results.title">scan summary</h2>
+<h2 class="label" id="results-title" data-i18n="results.title">resumen del análisis</h2>
 <div class="tiles"></div>
-<p class="hint" data-i18n="results.empty">No scan yet. Press RUN THE SCAN to see what this browser gives away.</p>
+<p class="hint" data-i18n="results.empty">Todavía no hay análisis. Pulsa INICIAR EL ANÁLISIS para ver lo que revela este navegador.</p>
 </section>
 
 <section class="block" id="browser" aria-labelledby="browser-title">
 <div class="block-head">
-<h2 id="browser-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.browser.title">your browser</span></h2>
-<p class="block-sub" data-i18n="section.browser.sub">read by any page, no permission asked</p>
+<h2 id="browser-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.browser.title">tu navegador</span></h2>
+<p class="block-sub" data-i18n="section.browser.sub">cualquier página lo lee, sin pedir permiso</p>
 </div>
 <ul class="findings"></ul>
 </section>
 
 <section class="block" id="connection" aria-labelledby="connection-title">
 <div class="block-head">
-<h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">your connection</span></h2>
-<p class="block-sub" data-i18n="section.connection.sub">runs only when you click, contacts only leakcheck's own server</p>
+<h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">tu conexión</span></h2>
+<p class="block-sub" data-i18n="section.connection.sub">solo se ejecuta al hacer clic y solo contacta con el servidor de leakcheck</p>
 </div>
 <div class="action-box">
-<p data-i18n="connection.intro">Pressing the button sends a few requests to leakcheck's own server and nowhere else. It reads the address your connection comes from and looks it up in its own copy of an IP database. Nothing is stored.</p>
-<button type="button" class="btn" id="run-connection" data-i18n="connection.run">CHECK MY CONNECTION</button>
+<p data-i18n="connection.intro">Al pulsar el botón se envían unas pocas solicitudes al servidor de leakcheck y a ningún otro sitio. Lee la dirección desde la que llega tu conexión y la busca en su propia copia de una base de datos de IP. No se guarda nada.</p>
+<button type="button" class="btn" id="run-connection" data-i18n="connection.run">COMPROBAR MI CONEXIÓN</button>
 </div>
 <ul class="findings"></ul>
 <div class="actions" id="connection-tools" hidden>
-<button type="button" class="btn btn-secondary" id="reveal-ip" aria-pressed="false" data-i18n="connection.reveal">SHOW FULL IP</button>
+<button type="button" class="btn btn-secondary" id="reveal-ip" aria-pressed="false" data-i18n="connection.reveal">MOSTRAR LA IP COMPLETA</button>
 </div>
 <div class="action-box" id="vpn-off-box" hidden>
-<p data-i18n="connection.vpnOff.note">Strong VPNs such as Mullvad, Proton or Nym leave no sign a site can see.</p>
-<button type="button" class="btn btn-secondary" id="vpn-off" data-i18n="connection.vpnOff.run">CHECK AGAIN WITH VPN OFF</button>
+<p data-i18n="connection.vpnOff.note">Las buenas VPN, como Mullvad, Proton o Nym, no dejan ninguna señal que un sitio pueda ver. Para comprobar la tuya, desactívala y pulsa el botón: la página vuelve a preguntar al servidor de leakcheck y compara las dos direcciones.</p>
+<button type="button" class="btn btn-secondary" id="vpn-off" data-i18n="connection.vpnOff.run">COMPROBAR SIN LA VPN</button>
 <p class="vpn-off-result" id="vpn-off-result" aria-live="polite"></p>
 </div>
 </section>
 
 <section class="block" id="localnet" aria-labelledby="localnet-title">
 <div class="block-head">
-<h2 id="localnet-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.localnet.title">your local network</span></h2>
-<p class="block-sub" data-i18n="section.localnet.sub">needs your permission</p>
+<h2 id="localnet-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.localnet.title">tu red local</span></h2>
+<p class="block-sub" data-i18n="section.localnet.sub">necesita tu permiso</p>
 </div>
 <div class="action-box">
-<p data-i18n="localnet.intro">Your browser may ask for permission before this page can reach devices on your home network, and saying no is a valid answer: it means the protection works. A website cannot see MAC addresses, device names or Wi-Fi details. Only an installed app can.</p>
-<button type="button" class="btn" id="run-localnet" data-i18n="localnet.run">PROBE MY NETWORK</button>
+<p data-i18n="localnet.intro">Puede que tu navegador pida permiso antes de que esta página llegue a los dispositivos de tu red doméstica, y decir que no es una respuesta válida: significa que la protección funciona. Un sitio web no puede ver direcciones MAC, nombres de dispositivos ni detalles del Wi-Fi. Solo una aplicación instalada puede.</p>
+<button type="button" class="btn" id="run-localnet" data-i18n="localnet.run">EXPLORAR MI RED</button>
 </div>
 <ul class="findings"></ul>
 </section>
 
 <section class="cta" id="fix-cta" aria-labelledby="fix-cta-title">
 <div class="cta-text">
-<h2 id="fix-cta-title" data-i18n="fix.cta.title">fix the top 3 first</h2>
-<p data-i18n="section.fix.sub">A short list ordered by how much each change hides, with steps for your browser.</p>
+<h2 id="fix-cta-title" data-i18n="fix.cta.title">empieza por las 3 primeras</h2>
+<p data-i18n="section.fix.sub">Una lista corta, ordenada según cuánto oculta cada cambio, con los pasos para tu navegador.</p>
 </div>
-<button type="button" class="btn" id="show-fixes" aria-expanded="false" aria-controls="fix" data-i18n="fix.cta.run">SHOW MY FIXES</button>
+<button type="button" class="btn" id="show-fixes" aria-expanded="false" aria-controls="fix" data-i18n="fix.cta.run">VER MIS SOLUCIONES</button>
 </section>
 
 <section class="block" id="fix" aria-labelledby="fix-title" hidden>
 <div class="block-head">
-<h2 id="fix-title" tabindex="-1"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.fix.title">your fix plan</span></h2>
-<p class="block-sub" data-i18n="fix.sub">Ordered by how much each change hides compared with the effort. Steps match the browser we detected. Nothing here is sponsored.</p>
+<h2 id="fix-title" tabindex="-1"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.fix.title">tu plan de soluciones</span></h2>
+<p class="block-sub" data-i18n="fix.sub">Ordenadas según cuánto oculta cada cambio frente al esfuerzo. Los pasos corresponden al navegador detectado. Nada de esto está patrocinado.</p>
 </div>
 <fieldset class="threats" role="radiogroup" aria-labelledby="threat-legend">
-<legend class="threats-legend" id="threat-legend" data-i18n="fix.threat.legend">who are you hiding from?</legend>
+<legend class="threats-legend" id="threat-legend" data-i18n="fix.threat.legend">¿de quién te escondes?</legend>
 <div class="threat-options">
-<label class="threat"><input type="radio" name="threat" value="ads" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.ads.title">advertisers and trackers</span><span class="threat-desc" data-i18n="fix.threat.ads.desc">Companies following you from site to site to build a profile.</span></span></label>
-<label class="threat"><input type="radio" name="threat" value="network" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.network.title">my internet provider or wi-fi</span><span class="threat-desc" data-i18n="fix.threat.network.desc">Whoever runs the network can see which sites you visit.</span></span></label>
-<label class="threat"><input type="radio" name="threat" value="targeted" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.targeted.title">someone looking for me</span><span class="threat-desc" data-i18n="fix.threat.targeted.desc">A person or group trying to identify or locate you specifically.</span></span></label>
+<label class="threat"><input type="radio" name="threat" value="ads" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.ads.title">anunciantes y rastreadores</span><span class="threat-desc" data-i18n="fix.threat.ads.desc">Empresas que te siguen de un sitio a otro para crear un perfil.</span></span></label>
+<label class="threat"><input type="radio" name="threat" value="network" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.network.title">mi proveedor de internet o el wifi</span><span class="threat-desc" data-i18n="fix.threat.network.desc">Quien gestiona la red puede ver qué sitios visitas.</span></span></label>
+<label class="threat"><input type="radio" name="threat" value="targeted" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.targeted.title">alguien que me busca</span><span class="threat-desc" data-i18n="fix.threat.targeted.desc">Una persona o un grupo que intenta identificarte o localizarte a ti en concreto.</span></span></label>
 </div>
 </fieldset>
-<div class="progress" role="group" aria-label="progress" data-i18n-attr="aria-label:fix.progress.label">
+<div class="progress" role="group" aria-label="progreso" data-i18n-attr="aria-label:fix.progress.label">
 <p class="progress-count" id="fix-done"></p>
 <div class="progress-bar" aria-hidden="true"></div>
-<button type="button" class="btn" id="rescan" data-i18n="fix.rescan.run">RESCAN TO VERIFY</button>
+<button type="button" class="btn" id="rescan" data-i18n="fix.rescan.run">ANALIZAR DE NUEVO</button>
 <p class="rescan-result" id="rescan-result"></p>
 </div>
 <aside class="note" aria-labelledby="note-title">
-<p class="label" id="note-title" data-i18n="fix.note.title">read this first</p>
-<p data-i18n="fix.note.text">Changing lots of settings by hand can make you easier to recognize, because almost nobody has your exact mix. The strongest fixes make you look like everyone else: a browser that gives all its users the same answers.</p>
+<p class="label" id="note-title" data-i18n="fix.note.title">lee esto primero</p>
+<p data-i18n="fix.note.text">Cambiar muchos ajustes a mano puede hacerte más fácil de reconocer, porque casi nadie tiene tu misma combinación. Las mejores soluciones te hacen parecer igual que todos: un navegador que da las mismas respuestas a todos sus usuarios.</p>
 </aside>
 <ol class="fix-list"></ol>
-<p class="hint" data-i18n="fix.ticks">Your ticks stay in this tab and vanish when you close it.</p>
+<p class="hint" data-i18n="fix.ticks">Tus marcas se quedan en esta pestaña y desaparecen al cerrarla.</p>
 </section>
 
 </main>
 
 <footer class="site-footer">
 <div class="wrap footer-links">
-<p><span data-i18n="footer.cookies">no cookies</span><span aria-hidden="true"> · </span><span data-i18n="footer.analytics">no analytics</span><span aria-hidden="true"> · </span><span data-i18n="footer.source">open source</span></p>
-<a href="https://db-ip.com" data-i18n="footer.dbip">IP data by DB-IP</a>
+<p><span data-i18n="footer.cookies">sin cookies</span><span aria-hidden="true"> · </span><span data-i18n="footer.analytics">sin analítica</span><span aria-hidden="true"> · </span><span data-i18n="footer.source">código abierto</span></p>
+<a href="https://db-ip.com" data-i18n="footer.dbip">Datos IP de DB-IP</a>
 </div>
 </footer>
 

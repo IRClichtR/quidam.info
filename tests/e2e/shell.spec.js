@@ -50,7 +50,7 @@ test('each page loads its own string file', async ({ page }) => {
   await page.goto(BASE + '/fr/');
   await expect(page.locator('html')).toHaveAttribute('data-i18n-ready', 'fr');
   expect(urls).toContain(BASE + '/js/i18n/fr.js');
-  await expect(page.locator('#skip')).toHaveText('Skip to results');
+  await expect(page.locator('#skip')).toHaveText('Aller aux résultats');
 });
 
 test('the skip link is the first Tab stop and targets the results', async ({ page }) => {
