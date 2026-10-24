@@ -4,7 +4,7 @@ import { collectBrowser, judgeBrowser } from './browser.js';
 import { renderFindings, renderSummary, announce } from './render.js';
 import { state } from './state.js';
 import { fetchWhoami, gatherSrflx, judgeConnection, compareVpnOff, stunUrls, primaryLookup } from './connection.js';
-import { probeRouters, promptSupported, judgeLocalnet } from './localnet.js';
+import { probeRouters, permissionState, probeTimeout, judgeLocalnet } from './localnet.js';
 import zoneCountries from './tz-countries.js';
 
 const root = document.documentElement;
@@ -156,8 +156,9 @@ async function runLocalnet() {
   localBtn.setAttribute('aria-disabled', 'true');
   announce(t('localnet.running'));
   try {
-    const [router, asked] = await Promise.all([probeRouters(), promptSupported()]);
-    state.localnet = judgeLocalnet({ router, promptSupported: asked }, t);
+    const permission = await permissionState();
+    const router = await probeRouters(fetch, performance.now.bind(performance), probeTimeout(permission));
+    state.localnet = judgeLocalnet({ router, promptSupported: permission !== null }, t);
     renderFindings(/** @type {HTMLUListElement} */ (document.querySelector('#localnet .findings')), state.localnet, t);
     updateSummary();
     announce(t('localnet.done', counts(state.localnet)));

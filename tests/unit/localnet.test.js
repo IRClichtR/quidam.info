@@ -1,7 +1,7 @@
 // @ts-check
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
 import { loadStrings, t } from '../../public/js/i18n.js';
-import { ROUTERS, probeRouters, promptSupported, judgeLocalnet } from '../../public/js/localnet.js';
+import { ROUTERS, probeRouters, promptSupported, permissionState, probeTimeout, judgeLocalnet } from '../../public/js/localnet.js';
 import en from '../../public/js/i18n/en.js';
 
 beforeAll(async () => { await loadStrings('en'); });
@@ -62,6 +62,18 @@ describe('promptSupported', () => {
   it('is false without the Permissions API', async () => {
     vi.stubGlobal('navigator', {});
     expect(await promptSupported()).toBe(false);
+  });
+});
+
+describe('probeTimeout', () => {
+  it('waits 30 s while the prompt may be open, 3 s otherwise', () => {
+    expect([probeTimeout('prompt'), probeTimeout('granted'), probeTimeout('denied'), probeTimeout(null)]).toEqual([30000, 3000, 3000, 3000]);
+  });
+  it('reads the state once from the permission query', async () => {
+    vi.stubGlobal('navigator', { permissions: { query: async () => ({ state: 'prompt' }) } });
+    expect(await permissionState()).toBe('prompt');
+    vi.stubGlobal('navigator', {});
+    expect(await permissionState()).toBeNull();
   });
 });
 

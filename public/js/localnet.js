@@ -36,14 +36,24 @@ export async function probeRouters(fetchFn = fetch, now = performance.now.bind(p
   }
 }
 
+/** The local network permission state, or null when the browser has no such permission. */
+export async function permissionState() {
+  try {
+    const status = await navigator.permissions.query(/** @type {PermissionDescriptor} */ (/** @type {unknown} */ ({ name: 'local-network-access' })));
+    return status.state;
+  } catch {
+    return null;
+  }
+}
+
 /** Whether this browser has a local network permission (and so asks before a page reaches the network). */
 export async function promptSupported() {
-  try {
-    await navigator.permissions.query(/** @type {PermissionDescriptor} */ (/** @type {unknown} */ ({ name: 'local-network-access' })));
-    return true;
-  } catch {
-    return false;
-  }
+  return (await permissionState()) !== null;
+}
+
+/** Wait long enough for the visitor to answer the browser's prompt. @param {PermissionState|null} state */
+export function probeTimeout(state) {
+  return state === 'prompt' ? 30_000 : 3_000;
 }
 
 /**
