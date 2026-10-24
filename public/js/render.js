@@ -15,11 +15,14 @@ const ICONS = {
   chevron: ['M5 3l5 5-5 5'],
 };
 
+/** @typedef {keyof typeof ICONS} IconName */
+
 /**
- * @param {keyof typeof ICONS} name
+ * An inline SVG icon, hidden from screen readers.
+ * @param {IconName} name
  * @param {number} [stroke]
  */
-function icon(name, stroke = 3) {
+export function icon(name, stroke = 3) {
   const svg = document.createElementNS(SVG, 'svg');
   svg.setAttribute('viewBox', '0 0 16 16');
   svg.setAttribute('aria-hidden', 'true');
@@ -37,11 +40,12 @@ function icon(name, stroke = 3) {
 }
 
 /**
+ * A new element with an optional class and text (set as textContent).
  * @param {string} tag
  * @param {string} [className]
  * @param {string} [text]
  */
-function el(tag, className, text) {
+export function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
@@ -66,6 +70,9 @@ let panelSeq = 0;
 export function renderFindings(listEl, findings, t) {
   const rows = findings.map((f) => {
     const li = el('li');
+    // Stable target for the fix plan's tag links; tabindex lets a link move focus here.
+    li.id = `finding-${f.id}`;
+    li.tabIndex = -1;
     li.dataset.finding = f.id;
     li.dataset.verdict = f.verdict;
 

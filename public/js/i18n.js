@@ -1,7 +1,7 @@
 // @ts-check
 import { LANGS } from './lang.js';
 
-/** @typedef {Record<string, string>} Strings */
+/** Most values are strings; step lists are arrays of strings. @typedef {Record<string, string|string[]>} Strings */
 
 const DEV = typeof location === 'undefined' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
 
@@ -28,9 +28,23 @@ export async function loadStrings(lang) {
  */
 export function t(key, vars = {}) {
   const s = strings[key];
-  if (s === undefined) {
+  if (typeof s !== 'string') {
     if (DEV) throw new Error(`missing string: ${key}`);
     return key;
   }
   return s.replace(/\{(\w+)\}/g, (m, name) => (vars[name] === undefined ? m : String(vars[name])));
+}
+
+/**
+ * The loaded list for `key` (steps, one string per item). Missing keys behave as in `t`.
+ * @param {string} key
+ * @returns {string[]}
+ */
+export function tList(key) {
+  const s = strings[key];
+  if (!Array.isArray(s)) {
+    if (DEV) throw new Error(`missing list: ${key}`);
+    return [key];
+  }
+  return s;
 }

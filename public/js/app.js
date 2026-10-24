@@ -1,11 +1,12 @@
 // @ts-check
-import { loadStrings, t } from './i18n.js';
+import { loadStrings, t, tList } from './i18n.js';
 import { collectBrowser, judgeBrowser } from './browser.js';
-import { renderFindings, renderSummary, announce } from './render.js';
+import { renderFindings, renderSummary, announce, el } from './render.js';
 import { state } from './state.js';
 import { fetchWhoami, gatherSrflx, judgeConnection, compareVpnOff, stunUrls, primaryLookup } from './connection.js';
 import { probeRouters, permissionState, probeTimeout, judgeLocalnet } from './localnet.js';
 import zoneCountries from './tz-countries.js';
+import { FIXES, orderFixes, detectBrowser, buildFixCards } from './fixes.js';
 
 const root = document.documentElement;
 await loadStrings(root.lang);
@@ -85,6 +86,7 @@ function drawConnection() {
 async function runConnection() {
   if (checking) return;
   checking = true;
+  state.ran.connection = true;
   connBtn.setAttribute('aria-disabled', 'true');
   announce(t('connection.running'));
   try {
@@ -153,6 +155,7 @@ let probing = false;
 async function runLocalnet() {
   if (probing) return;
   probing = true;
+  state.ran.localnet = true;
   localBtn.setAttribute('aria-disabled', 'true');
   announce(t('localnet.running'));
   try {
@@ -170,3 +173,72 @@ async function runLocalnet() {
   }
 }
 localBtn.addEventListener('click', runLocalnet);
+
+// ---------- fix plan ----------
+const fixSection = /** @type {HTMLElement} */ (document.getElementById('fix'));
+const showFixesBtn = /** @type {HTMLButtonElement} */ (document.getElementById('show-fixes'));
+const fixList = /** @type {HTMLOListElement} */ (fixSection.querySelector('.fix-list'));
+const doneCount = /** @type {HTMLElement} */ (document.getElementById('fix-done'));
+const progressBar = /** @type {HTMLElement} */ (fixSection.querySelector('.progress-bar'));
+const rescanBtn = /** @type {HTMLButtonElement} */ (document.getElementById('rescan'));
+const rescanResult = /** @type {HTMLElement} */ (document.getElementById('rescan-result'));
+/** Ticked fixes, in memory only: they vanish with the tab. @type {Set<string>} */
+const done = new Set();
+
+/** Show "N / 7 done" and one block per fix, filled when ticked. */
+function drawProgress() {
+  const num = new Intl.NumberFormat(root.lang);
+  doneCount.textContent = t('fix.progress.done', { n: num.format(done.size), total: num.format(FIXES.length) });
+  progressBar.replaceChildren(...FIXES.map((_, i) => el('span', i < done.size ? 'bar-cell is-done' : 'bar-cell')));
+}
+
+const cards = buildFixCards({
+  t, tList, lang: root.lang,
+  browser: detectBrowser(/** @type {{userAgent: string, brave?: unknown}} */ (navigator)),
+  onToggle: (id, on) => {
+    if (on) done.add(id); else done.delete(id);
+    drawProgress();
+  },
+});
+
+/** Put the cards in the order for the picked threat; moving the nodes keeps ticks and open panels. */
+function orderCards() {
+  const picked = fixSection.querySelector('input[name="threat"]:checked');
+  const threat = picked instanceof HTMLInputElement ? /** @type {import('./fixes.js').Threat} */ (picked.value) : null;
+  fixList.replaceChildren(...orderFixes(threat).map((f) => /** @type {HTMLLIElement} */ (cards.get(f.id))));
+}
+orderCards();
+drawProgress();
+for (const radio of fixSection.querySelectorAll('input[name="threat"]')) radio.addEventListener('change', orderCards);
+
+showFixesBtn.addEventListener('click', () => {
+  fixSection.hidden = false;
+  showFixesBtn.setAttribute('aria-expanded', 'true');
+  /** @type {HTMLElement} */ (document.getElementById('fix-title')).focus();
+});
+
+/** Leaks across every section's current findings. */
+const leaking = () => [...state.browser, ...state.connection, ...state.localnet].filter((f) => f.verdict === 'leak').length;
+
+let rescanning = false;
+/** Rerun the browser scan, plus the click-gated checks the visitor already ran here, then compare leak counts. */
+rescanBtn.addEventListener('click', async () => {
+  if (rescanning) return;
+  rescanning = true;
+  rescanBtn.setAttribute('aria-disabled', 'true');
+  rescanResult.textContent = '';
+  const before = leaking();
+  try {
+    announce(t('fix.rescan.running'));
+    await runScan();
+    if (state.ran.connection) await runConnection();
+    if (state.ran.localnet) await runLocalnet();
+    const num = new Intl.NumberFormat(root.lang);
+    const text = t('fix.rescan.result', { before: num.format(before), after: num.format(leaking()) });
+    rescanResult.textContent = text;
+    announce(text);
+  } finally {
+    rescanning = false;
+    rescanBtn.removeAttribute('aria-disabled');
+  }
+});

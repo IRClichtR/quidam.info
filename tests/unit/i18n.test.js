@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import en from '../../public/js/i18n/en.js';
 import fr from '../../public/js/i18n/fr.js';
 import es from '../../public/js/i18n/es.js';
-import { loadStrings, t } from '../../public/js/i18n.js';
+import { loadStrings, t, tList } from '../../public/js/i18n.js';
 
 describe('string files', () => {
   it('have identical key sets', () => {
@@ -16,7 +16,9 @@ describe('string files', () => {
   });
   it('have no empty value', () => {
     for (const strings of [en, fr, es]) {
-      for (const [key, value] of Object.entries(strings)) expect(value.trim(), key).not.toBe('');
+      for (const [key, value] of Object.entries(strings)) {
+        for (const v of [value].flat()) expect(v.trim(), key).not.toBe('');
+      }
     }
   });
 });
@@ -32,5 +34,12 @@ describe('t', () => {
   it('throws on a missing key in development', async () => {
     await loadStrings('en');
     expect(() => t('no.such.key')).toThrow(/no.such.key/);
+  });
+  it('tList returns a list and throws on a missing key in development', async () => {
+    await loadStrings('en');
+    const steps = tList('fix.dns.steps.chrome');
+    expect(Array.isArray(steps)).toBe(true);
+    expect(steps.length).toBeGreaterThan(0);
+    expect(() => tList('no.such.list')).toThrow(/no.such.list/);
   });
 });

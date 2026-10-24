@@ -22,7 +22,7 @@
 <a href="#browser" data-i18n="nav.browser">browser</a>
 <a href="#connection" data-i18n="nav.connection">connection</a>
 <a href="#localnet" data-i18n="nav.localnet">local network</a>
-<a href="#fix" data-i18n="nav.fix">fix it</a>
+<a href="#fix-cta" data-i18n="nav.fix">fix it</a>
 </nav>
 <div class="header-end">
 <nav class="picker" aria-label="Language" data-i18n-attr="aria-label:nav.language">
@@ -93,12 +93,39 @@
 <ul class="findings"></ul>
 </section>
 
-<section class="block" id="fix" aria-labelledby="fix-title">
-<div class="block-head">
-<h2 id="fix-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.fix.title">your fix plan</span></h2>
-<p class="block-sub" data-i18n="section.fix.sub">A short list ordered by how much each change hides, with steps for your browser.</p>
+<section class="cta" id="fix-cta" aria-labelledby="fix-cta-title">
+<div class="cta-text">
+<h2 id="fix-cta-title" data-i18n="fix.cta.title">fix the top 3 first</h2>
+<p data-i18n="section.fix.sub">A short list ordered by how much each change hides, with steps for your browser.</p>
 </div>
-<div class="fix-plan"></div>
+<button type="button" class="btn" id="show-fixes" aria-expanded="false" aria-controls="fix" data-i18n="fix.cta.run">SHOW MY FIXES</button>
+</section>
+
+<section class="block" id="fix" aria-labelledby="fix-title" hidden>
+<div class="block-head">
+<h2 id="fix-title" tabindex="-1"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.fix.title">your fix plan</span></h2>
+<p class="block-sub" data-i18n="fix.sub">Ordered by how much each change hides compared with the effort. Steps match the browser we detected. Nothing here is sponsored.</p>
+</div>
+<fieldset class="threats" role="radiogroup" aria-labelledby="threat-legend">
+<legend class="threats-legend" id="threat-legend" data-i18n="fix.threat.legend">who are you hiding from?</legend>
+<div class="threat-options">
+<label class="threat"><input type="radio" name="threat" value="ads" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.ads.title">advertisers and trackers</span><span class="threat-desc" data-i18n="fix.threat.ads.desc">Companies following you from site to site to build a profile.</span></span></label>
+<label class="threat"><input type="radio" name="threat" value="network" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.network.title">my internet provider or wi-fi</span><span class="threat-desc" data-i18n="fix.threat.network.desc">Whoever runs the network can see which sites you visit.</span></span></label>
+<label class="threat"><input type="radio" name="threat" value="targeted" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.targeted.title">someone looking for me</span><span class="threat-desc" data-i18n="fix.threat.targeted.desc">A person or group trying to identify or locate you specifically.</span></span></label>
+</div>
+</fieldset>
+<div class="progress" role="group" aria-label="progress" data-i18n-attr="aria-label:fix.progress.label">
+<p class="progress-count" id="fix-done"></p>
+<div class="progress-bar" aria-hidden="true"></div>
+<button type="button" class="btn" id="rescan" data-i18n="fix.rescan.run">RESCAN TO VERIFY</button>
+<p class="rescan-result" id="rescan-result"></p>
+</div>
+<aside class="note" aria-labelledby="note-title">
+<p class="label" id="note-title" data-i18n="fix.note.title">read this first</p>
+<p data-i18n="fix.note.text">Changing lots of settings by hand can make you easier to recognize, because almost nobody has your exact mix. The strongest fixes make you look like everyone else: a browser that gives all its users the same answers.</p>
+</aside>
+<ol class="fix-list"></ol>
+<p class="hint" data-i18n="fix.ticks">Your ticks stay in this tab and vanish when you close it.</p>
 </section>
 
 </main>
