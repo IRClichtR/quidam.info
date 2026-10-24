@@ -4,6 +4,7 @@ import { collectBrowser, judgeBrowser } from './browser.js';
 import { renderFindings, renderSummary, announce } from './render.js';
 import { state } from './state.js';
 import { fetchWhoami, gatherSrflx, judgeConnection, compareVpnOff, stunUrls, primaryLookup } from './connection.js';
+import { probeRouters, promptSupported, judgeLocalnet } from './localnet.js';
 import zoneCountries from './tz-countries.js';
 
 const root = document.documentElement;
@@ -32,7 +33,7 @@ function counts(findings) {
 
 /** The summary tiles count every section's findings together. */
 function updateSummary() {
-  renderSummary(/** @type {HTMLElement} */ (document.querySelector('#results .tiles')), [...state.browser, ...state.connection], t);
+  renderSummary(/** @type {HTMLElement} */ (document.querySelector('#results .tiles')), [...state.browser, ...state.connection, ...state.localnet], t);
   const hint = document.querySelector('#results .hint');
   if (hint instanceof HTMLElement) hint.hidden = true;
 }
@@ -143,3 +144,28 @@ vpnOffBtn.addEventListener('click', async () => {
     vpnOffBtn.removeAttribute('aria-disabled');
   }
 });
+
+// ---------- local network probe ----------
+const localBtn = /** @type {HTMLButtonElement} */ (document.getElementById('run-localnet'));
+let probing = false;
+
+/** Try the router addresses and check for the browser's permission prompt. A click during a probe is ignored. */
+async function runLocalnet() {
+  if (probing) return;
+  probing = true;
+  localBtn.setAttribute('aria-disabled', 'true');
+  announce(t('localnet.running'));
+  try {
+    const [router, asked] = await Promise.all([probeRouters(), promptSupported()]);
+    state.localnet = judgeLocalnet({ router, promptSupported: asked }, t);
+    renderFindings(/** @type {HTMLUListElement} */ (document.querySelector('#localnet .findings')), state.localnet, t);
+    updateSummary();
+    announce(t('localnet.done', counts(state.localnet)));
+  } catch {
+    announce(t('localnet.failed'));
+  } finally {
+    probing = false;
+    localBtn.removeAttribute('aria-disabled');
+  }
+}
+localBtn.addEventListener('click', runLocalnet);
