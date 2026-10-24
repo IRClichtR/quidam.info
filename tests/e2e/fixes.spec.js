@@ -101,7 +101,7 @@ test('the meter reads without colour, and steps match the detected browser', asy
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  const name = browserName === 'firefox' ? 'Firefox' : 'Chrome';
+  const name = { chromium: 'Chrome', firefox: 'Firefox', webkit: 'Safari' }[browserName];
   await expect(page.locator('#fix [data-fix="dns"] .panel')).toContainText(`steps in ${name}`);
   await expect(page.locator('#fix [data-fix="dns"] .panel')).toContainText('trade-off');
 });
