@@ -38,7 +38,7 @@ This plan ends with the finished site **running on localhost** for local testing
 | Static site, no server, statichost.eu | **One Node.js server** serves the pages, the IP endpoint and STUN **(Floriane)**. Hosting choice revisited in the hosting step. |
 | Outside IP lookup service | Our server reads the visitor's IP from the connection and looks it up in **DB-IP Lite** databases stored on the server **(Floriane)**. |
 | Public STUN server | Our server answers STUN binding requests over UDP itself **(Floriane)**. |
-| Public IP "OK when it belongs to a VPN, Tor or relay" | OK when the IP is on the **Tor Project exit list** or **Apple iCloud Private Relay egress list** **(Floriane)**. Otherwise the page says it can't tell whether a VPN is used (strong VPNs such as Mullvad, Proton, Nym leave no sign) and offers leakcheck's own **"Check again with VPN off"** button **(Floriane)**. |
+| Public IP "OK when it belongs to a VPN, Tor or relay" | OK when the IP is on the **Tor Project exit list** or **Apple iCloud Private Relay egress list** **(Floriane)**. Otherwise the page says it can't tell whether a VPN is used (strong VPNs such as Nym, Mullvad, Proton leave no sign) and offers leakcheck's own **"Check again with VPN off"** button **(Floriane)**. |
 | Approximate location with accuracy radius | City and country only; DB-IP Lite has no radius. |
 | Location "OK when city differs from the browser timezone, or is the relay's" | Follows the public IP row: OK on Tor or Private Relay; otherwise decided by the visitor's VPN answer and the VPN-off check (see "IP section" below). The time-zone comparison was dropped on 2026-10-24 **(Floriane)**. |
 | Provider "OK when not the visitor's home ISP" | Same rule as Location **(Floriane)**. |

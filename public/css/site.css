@@ -161,8 +161,7 @@ h1, h2,
 .brand { font-size: clamp(1.25rem, 9vw, 1.75rem); line-height: 1; overflow-wrap: anywhere; }
 .brand-cursor { color: var(--red); }
 
-.nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1.25rem; font-size: 0.9375rem; }
-.nav a, .footer-links a { display: inline-flex; align-items: center; min-height: 44px; }
+.footer-links a { display: inline-flex; align-items: center; min-height: 44px; }
 
 .picker { display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.5rem; font-size: 0.9375rem; }
 .picker a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }

@@ -20,7 +20,7 @@ vocabulary: "un Mac", "Añadir"). Decide whether Latin American variants are nee
 - [x] Connection: intro, buttons, VPN-off check, findings (`connection.*`, `finding.publicIp/provider/location/vpn*`)
 - [x] Local network: intro, findings (`localnet.*`, `finding.router/lnaPrompt/otherDevices`)
 - [x] Fix plan chrome: CTA, threat question, progress, rescan, note, tiers, meters, tags (`fix.cta` … `fix.tradeoff.label`)
-- [ ] Strings added after the first review (VPN question redesign): `scan.intro`, `nav.connection`, `section.connection.title`, `connection.intro`, `connection.run`, `connection.vpn.*`, `finding.publicIp.local`, `finding.publicIp.fix`, `finding.provider.fix`, `finding.location.why`, `finding.location.fix`, `finding.vpn4.why`, `finding.vpn6.why`, and the last step of `fix.ip.steps.*`
+- [ ] Strings added after the first review (VPN question redesign): `scan.intro`, `section.connection.title`, `connection.intro`, `connection.run`, `connection.vpn.*`, `finding.publicIp.local`, `finding.publicIp.fix`, `finding.provider.fix`, `finding.location.why`, `finding.location.fix`, `finding.vpn4.why`, `finding.vpn6.why`, and the last step of `fix.ip.steps.*`
 - [ ] Fix cards: title, why, trade-off, and steps for each browser, for `block`, `dns`, `perms`, `browser`, `ip`, `split`, `tor`
 - [ ] Button labels are short enough and still natural: LANCER L'ANALYSE, VÉRIFIER MON IP, AFFICHER L'IP COMPLÈTE, REVÉRIFIER VPN COUPÉ, SONDER MON RÉSEAU, VOIR MES CORRECTIFS, RELANCER POUR VÉRIFIER
 - [ ] Typography is consistent: a no-break space (U+00A0, not the narrow U+202F) before `: ; ? !` in `fr.js` values and in the static text of `public/fr/index.html` (a unit test enforces it), « » used only in `fix.perms.title`
