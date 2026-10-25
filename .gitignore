@@ -3,3 +3,9 @@ node_modules/
 test-results/
 playwright-report/
 public/fonts/VCR*
+/deploy/config.sh
+# Your personal details and what is generated from them (npm run legal): never committed.
+/legal/owner.json
+/legal/out/
+/public/*/legal/
+/public/.well-known/
