@@ -20,23 +20,23 @@ vocabulary: "un Mac", "Añadir"). Decide whether Latin American variants are nee
 - [x] Connection: intro, buttons, VPN-off check, findings (`connection.*`, `finding.publicIp/provider/location/vpn*`)
 - [x] Local network: intro, findings (`localnet.*`, `finding.router/lnaPrompt/otherDevices`)
 - [x] Fix plan chrome: CTA, threat question, progress, rescan, note, tiers, meters, tags (`fix.cta` … `fix.tradeoff.label`)
-- [ ] Strings added after the first review (VPN question redesign): `scan.intro`, `section.connection.title`, `connection.intro`, `connection.run`, `connection.vpn.*`, `finding.publicIp.local`, `finding.publicIp.fix`, `finding.provider.fix`, `finding.location.why`, `finding.location.fix`, `finding.vpn4.why`, `finding.vpn6.why`, and the last step of `fix.ip.steps.*`
-- [ ] Fix cards: title, why, trade-off, and steps for each browser, for `block`, `dns`, `perms`, `browser`, `ip`, `split`, `tor`
-- [ ] Button labels are short enough and still natural: LANCER L'ANALYSE, VÉRIFIER MON IP, AFFICHER L'IP COMPLÈTE, REVÉRIFIER VPN COUPÉ, SONDER MON RÉSEAU, VOIR MES CORRECTIFS, RELANCER POUR VÉRIFIER
-- [ ] Typography is consistent: a no-break space (U+00A0, not the narrow U+202F) before `: ; ? !` in `fr.js` values and in the static text of `public/fr/index.html` (a unit test enforces it), « » used only in `fix.perms.title`
+- [x] Strings added after the first review (VPN question redesign): `scan.intro`, `section.connection.title`, `connection.intro`, `connection.run`, `connection.vpn.*`, `finding.publicIp.local`, `finding.publicIp.fix`, `finding.provider.fix`, `finding.location.why`, `finding.location.fix`, `finding.vpn4.why`, `finding.vpn6.why`, and the last step of `fix.ip.steps.*`
+- [x] Fix cards: title, why, trade-off, and steps for each browser, for `block`, `dns`, `perms`, `browser`, `ip`, `split`, `tor`
+- [x] Button labels are short enough and still natural: LANCER L'ANALYSE, VÉRIFIER MON IP, AFFICHER L'IP COMPLÈTE, REVÉRIFIER VPN COUPÉ, SONDER MON RÉSEAU, VOIR MES CORRECTIFS, RELANCER POUR VÉRIFIER
+- [x] Typography is consistent: a no-break space (U+00A0, not the narrow U+202F) before `: ; ? !` in `fr.js` values and in the static text of `public/fr/index.html` (a unit test enforces it), « » used only in `fix.perms.title`
 
 ### Spanish (`es.js`, `public/es/index.html`)
-- [ ] Page `<title>` and `<meta name="description">`
-- [ ] Header, navigation, language picker labels, skip link, "{n} bytes guardados"
-- [ ] Hero, scan button, summary tiles, footer (`hero.*`, `scan.*`, `results.*`, `summary.*`, `footer.*`)
-- [ ] Section titles and subtitles (`section.*`), panel labels (`panel.*`), tags (`tag.*`)
-- [ ] Browser findings: labels, values, "why" and "how to reduce it" (`finding.screen` … `finding.gpc`)
-- [ ] Connection: intro, buttons, VPN-off check, findings (`connection.*`, `finding.publicIp/provider/location/vpn*`)
-- [ ] Local network: intro, findings (`localnet.*`, `finding.router/lnaPrompt/otherDevices`)
-- [ ] Fix plan chrome: CTA, threat question, progress, rescan, note, tiers, meters, tags (`fix.cta` … `fix.tradeoff.label`)
-- [ ] Fix cards: title, why, trade-off, and steps for each browser, for `block`, `dns`, `perms`, `browser`, `ip`, `split`, `tor`
-- [ ] Button labels: INICIAR EL ANÁLISIS, COMPROBAR MI IP, MOSTRAR LA IP COMPLETA, COMPROBAR SIN LA VPN, EXPLORAR MI RED, VER MIS SOLUCIONES, ANALIZAR DE NUEVO
-- [ ] Gender and number agreement in counts ("{leak} con fuga, {ok} protegidos", "{n} / {total} hechas")
+- [x] Page `<title>` and `<meta name="description">`
+- [x] Header, navigation, language picker labels, skip link, "{n} bytes guardados"
+- [x] Hero, scan button, summary tiles, footer (`hero.*`, `scan.*`, `results.*`, `summary.*`, `footer.*`)
+- [x] Section titles and subtitles (`section.*`), panel labels (`panel.*`), tags (`tag.*`)
+- [x] Browser findings: labels, values, "why" and "how to reduce it" (`finding.screen` … `finding.gpc`)
+- [x] Connection: intro, buttons, VPN-off check, findings (`connection.*`, `finding.publicIp/provider/location/vpn*`)
+- [x] Local network: intro, findings (`localnet.*`, `finding.router/lnaPrompt/otherDevices`)
+- [x] Fix plan chrome: CTA, threat question, progress, rescan, note, tiers, meters, tags (`fix.cta` … `fix.tradeoff.label`)
+- [x] Fix cards: title, why, trade-off, and steps for each browser, for `block`, `dns`, `perms`, `browser`, `ip`, `split`, `tor`
+- [x] Button labels: INICIAR EL ANÁLISIS, COMPROBAR MI IP, MOSTRAR LA IP COMPLETA, COMPROBAR SIN LA VPN, EXPLORAR MI RED, VER MIS SOLUCIONES, ANALIZAR DE NUEVO
+- [x] Gender and number agreement in counts ("{leak} con fuga, {ok} protegidos", "{n} / {total} hechas")
 
 ## B. Follow every fix step in each real browser and language
 
@@ -91,7 +91,7 @@ Menu names to confirm:
 
 ## E. Automated tests on WebKit
 
-- [ ] On this machine WebKit cannot start: run `sudo npx playwright install-deps` (needs the user), then `npx playwright test --project=webkit`, and fix any failure. Chromium and Firefox already pass.
+- [x] WebKit now starts on this machine: `npx playwright test --project=webkit` passes (58 tests, 2026-10-25), as do Chromium and Firefox.
 
 ## F. Font licence
 
@@ -104,10 +104,12 @@ Menu names to confirm:
 
 ## H. Legal pages
 
-- [ ] Write the privacy notice in English, French and Spanish during the hosting step.
-- [ ] Write the French legal notice (mentions légales: publisher, host, contact) during the hosting step.
-- [ ] Link both from the footer of every language page.
-- [ ] Choose the repository licence (package.json says ISC by default).
+- [x] Privacy notice in English, French and Spanish: generated by `npm run legal` from `legal/owner.json` (docs/Go_live.md, step 5).
+- [x] French legal notice (LCEN art. 1-1): same page, same command.
+- [x] Linked from the footer of every language page.
+- [ ] Fill in `legal/owner.json`, run `npm run legal`, and have the three legal pages read once (by a native speaker for fr/es).
+- [ ] Choose the repository licence: `LICENSE` is GPL-2.0 but `package.json` says ISC (docs/Go_live.md, step 0.2). `npm run preflight` warns until they agree.
+- [ ] Decide about the name: "LeakCheck" (leakcheck.io) is an existing commercial service in the same field (docs/Go_live.md, step 0.1).
 
 ## I. Manual checks still to do
 
@@ -115,3 +117,29 @@ Menu names to confirm:
 - [ ] Run all three sections (browser, connection, local network) on the phone.
 - [ ] Toggle a VPN on the phone and run the VPN-off recheck both ways.
 - [ ] Expect CAN'T TELL on the canvas and audio rows: plain http over a LAN IP is not a secure context, so `crypto.subtle` is unavailable. This is not a bug; recheck on HTTPS once hosted.
+
+## v2: new text and new claims to check
+
+The v2 front end (docs/leakcheck-design-v2.md) added text that no native speaker has read and product facts that no one has checked against the products yet.
+
+### Native-speaker review of the v2 strings (fr and es)
+- [ ] Summary tiles: `summary.recog.*`, `fix.tile.*`.
+- [ ] Connection: `section.connection.*`, `connection.intro`, `connection.run`, `conn.*` (result card, "is this you?", outcomes).
+- [ ] "Your VPN, checked": `vpn.*`, including every answer and basic-fix line, and the double-check (`vpn.cmp.*`).
+- [ ] Fix plan: `fix.title` … `fix.notOn`, `fix.platform.*`, `fix.opt.*`, `fix.where.alt.*`, and the five cards `fix.browser.*`, `fix.where.*`, `fix.home.*`, `fix.gpc.*`, `fix.webrtc.*` (titles, descriptions, steps, trade-offs, tip).
+- [ ] Rewritten finding texts that now name tool types instead of uBlock Origin: `finding.webrtcLocal.fix`, `finding.router.fix`, `finding.lnaPrompt.fix`.
+- [ ] Page titles and descriptions: `page.title`, `page.description` (then `npm run pages`).
+- [ ] The legal page (`npm run legal`), in all three languages.
+- [ ] Plural forms read naturally: "0 fuite / 1 fuite / 2 fuites", "1 / 4 réglés", "{n} fuga(s)".
+
+### Facts on the cards (design v2, section 10)
+- [ ] Each browser option really does what its note says, on each platform: Brave, DuckDuckGo, Firefox (Strict), Mullvad Browser, Safari 26, Tor Browser. Run the scan in each and keep only what the scan confirms; in particular "only Mullvad Browser and Tor Browser also hide your screen, timezone and languages" (`fix.browser.further`).
+- [ ] Platform availability in `public/js/fixes.js` (`OPTIONS`): DuckDuckGo not on Linux; Mullvad Browser desktop only; Tor Browser not on iOS; Safari Apple only.
+- [ ] VPN notes: Mullvad (Sweden, no email, cash), NymVPN (Switzerland, 5-hop mixnet mode), Proton VPN (Switzerland, free plan, majority owned by the Proton Foundation), each with a published independent audit: check against each provider's site and latest audit report.
+- [ ] GPC: on by default in Brave and DuckDuckGo; the Firefox setting name in en/fr/es ("Tell websites not to sell or share my data"); DuckDuckGo Privacy Essentials and Privacy Badger still send it; Safari has no way to send it.
+- [ ] "Recent browsers hide the local address behind a random .local name" (webrtc card): check in current Chrome, Edge, Firefox, Safari.
+
+### Behaviour to check by hand
+- [ ] "Is this you?" with a real VPN (on a phone and a laptop): the three answers, TEST MY VPN, and the double-check both ways (VPN off and on again).
+- [ ] With iCloud Private Relay on (Safari): the question is skipped and the outcome says so.
+- [ ] Screen reader pass on the problem cards (done/undo moves focus), the radio group (arrow keys), and the live outcome text.
