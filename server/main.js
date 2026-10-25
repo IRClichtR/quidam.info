@@ -59,7 +59,7 @@ const stun = await startStun({
 // One line at startup, about the server only: nothing about visitors is ever logged.
 const addr = server.address();
 const httpPort = typeof addr === 'object' && addr ? addr.port : cfg.port;
-console.log(`ombre listening on ${cfg.host ?? '*'}:${httpPort} (stun ${stun.ports.udp4}, trust proxy ${cfg.trustProxy.length ? cfg.trustProxy.join(' ') : 'off'}, hsts ${cfg.hsts ? 'on' : 'off'})`);
+console.log(`quidam listening on ${cfg.host ?? '*'}:${httpPort} (stun ${stun.ports.udp4}, trust proxy ${cfg.trustProxy.length ? cfg.trustProxy.join(' ') : 'off'}, hsts ${cfg.hsts ? 'on' : 'off'})`);
 
 // Stop politely on Ctrl+C or when the host asks us to stop. The flag stops it running twice.
 let closing = false;

@@ -1,7 +1,7 @@
 # Copy this file to deploy/config.sh and fill it in. config.sh is git-ignored: it stays on your computer.
 #   cp deploy/config.example.sh deploy/config.sh
 
-# Your domain, without https:// and without www (for example: ombre.example).
+# Your domain, without https:// and without www (for example: quidam.example).
 DOMAIN="example.org"
 
 # The server's public IPv4 address (shown in the Hetzner console), or a name that points to it.

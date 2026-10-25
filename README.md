@@ -1,6 +1,6 @@
-# ombre
+# quidam
 
-ombre is a privacy-check website. One visit shows what a site can learn about you from three angles: your browser (screen, fonts, canvas, audio, graphics card and more), your connection (public IP, provider, location, VPN, Tor, Private Relay) and your local network (router and other devices reachable from the page). Each finding is tagged LEAK, OK or CAN'T TELL, with a plain explanation. The leaks are then grouped into a few problems, each with one basic fix that lists several tools in alphabetical order (never one brand, nothing sponsored), filtered to your platform. Pages are available in English, French and Spanish. It is a single Node server that serves the static pages, `/api/whoami` and a STUN endpoint, with a plain ES-module front end and no build step.
+quidam is a privacy-check website. One visit shows what a site can learn about you from three angles: your browser (screen, fonts, canvas, audio, graphics card and more), your connection (public IP, provider, location, VPN, Tor, Private Relay) and your local network (router and other devices reachable from the page). Each finding is tagged LEAK, OK or CAN'T TELL, with a plain explanation. The leaks are then grouped into a few problems, each with one basic fix that lists several tools in alphabetical order (never one brand, nothing sponsored), filtered to your platform. Pages are available in English, French and Spanish. It is a single Node server that serves the static pages, `/api/whoami` and a STUN endpoint, with a plain ES-module front end and no build step.
 
 ## Requirements
 

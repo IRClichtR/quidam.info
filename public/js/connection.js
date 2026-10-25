@@ -1,9 +1,9 @@
 // @ts-check
-// Connection findings. Every request goes to ombre's own server, and only after a click.
+// Connection findings. Every request goes to quidam's own server, and only after a click.
 
 // What we ask the network about you: your public IP (the address websites see), whose network it
 // belongs to, whether a VPN really hides it, and which local addresses WebRTC shares. Every request
-// goes to ombre's own server and STUN server, and only after a click. Nothing is stored (see state.js).
+// goes to quidam's own server and STUN server, and only after a click. Nothing is stored (see state.js).
 // Judging is pure logic; fetching and WebRTC are the browser-only parts.
 /** @typedef {import('./browser.js').Finding} Finding */
 /** @typedef {import('./browser.js').T} T */
@@ -173,7 +173,7 @@ export async function gatherIce(urls, timeoutMs = 5000) {
       pc.onicegatheringstatechange = () => {
         if (pc.iceGatheringState === 'complete') resolve(undefined);
       };
-      pc.createDataChannel('ombre');
+      pc.createDataChannel('quidam');
       pc.createOffer().then((o) => pc.setLocalDescription(o)).catch(() => resolve(undefined));
     });
   } finally {

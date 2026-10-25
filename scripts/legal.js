@@ -82,8 +82,8 @@ function texts(lang, o, date) {
   if (lang === 'fr') {
     return {
       title: `Mentions légales et confidentialité`,
-      pageTitle: `ombre${NB}: mentions légales et confidentialité`,
-      back: '← retour à ombre',
+      pageTitle: `quidam${NB}: mentions légales et confidentialité`,
+      back: '← retour à quidam',
       legalTitle: 'mentions légales',
       legal: you.publishHomeAddress
         ? `<p>Ce site est édité à titre non professionnel par une personne physique, conformément à l'article 1-1 de la loi n°${NB}2004-575 du 21${NB}juin 2004 pour la confiance dans l'économie numérique (LCEN).</p>
@@ -95,16 +95,16 @@ function texts(lang, o, date) {
       ip: `<p>Les données de géolocalisation IP proviennent de ${link('https://db-ip.com', 'DB-IP')} (IP to City Lite et IP to ASN Lite), sous licence ${link('https://creativecommons.org/licenses/by/4.0/deed.fr', 'CC BY 4.0')}. Les polices IBM Plex Mono et VT323 sont sous licence SIL Open Font License.${source ? ` Le code source du site est public${NB}: ${source}.` : ''}</p>
 <p>Les noms de produits et de services cités dans les solutions appartiennent à leurs propriétaires${NB}; ils sont cités pour les décrire. Rien n'est sponsorisé et il n'y a aucun lien affilié.</p>`,
       privacyTitle: 'confidentialité',
-      privacy: `<p>En bref${NB}: ombre ne dépose aucun cookie, ne stocke rien dans votre navigateur, ne fait aucune mesure d'audience et n'écrit l'adresse IP de personne sur un disque.</p>
+      privacy: `<p>En bref${NB}: quidam ne dépose aucun cookie, ne stocke rien dans votre navigateur, ne fait aucune mesure d'audience et n'écrit l'adresse IP de personne sur un disque.</p>
 <h3>Qui est responsable</h3>
 <p>${name}, particulier, qui édite ce site à titre non commercial. Contact${NB}: ${mail(you.email)}.</p>
 <h3>Ce que le site traite, et pourquoi</h3>
 <ul>
 <li><strong>Afficher les pages.</strong> Comme pour tout site, votre navigateur envoie votre adresse IP au serveur pour recevoir les pages. Elle sert à vous répondre, puis elle est oubliée. Aucun journal d'accès n'est tenu.</li>
 <li><strong>Analyse du navigateur.</strong> Elle a lieu dans votre navigateur, seulement quand vous appuyez sur le bouton. Les caractéristiques lues (écran, polices, carte graphique, etc.) servent uniquement à vous montrer le résultat, à votre demande. Rien n'est envoyé au serveur et rien n'est conservé.</li>
-<li><strong>Vérification de la connexion.</strong> Seulement quand vous appuyez sur le bouton. Le serveur d’ombre lit l'adresse IP de votre connexion, la cherche dans sa propre copie de bases publiques (DB-IP Lite, liste des sorties Tor, plages d'iCloud Private Relay), vous renvoie le résultat et l'oublie. Le serveur STUN du site vous renvoie de même l'adresse et le port qu'il voit. Aucun tiers n'est contacté à votre sujet.</li>
+<li><strong>Vérification de la connexion.</strong> Seulement quand vous appuyez sur le bouton. Le serveur de quidam lit l'adresse IP de votre connexion, la cherche dans sa propre copie de bases publiques (DB-IP Lite, liste des sorties Tor, plages d'iCloud Private Relay), vous renvoie le résultat et l'oublie. Le serveur STUN du site vous renvoie de même l'adresse et le port qu'il voit. Aucun tiers n'est contacté à votre sujet.</li>
 <li><strong>Protection contre les abus.</strong> Pour éviter qu'une seule adresse sature le service, le serveur garde en mémoire vive votre adresse IP et un compteur pendant une minute, puis les efface. Ils ne sont jamais écrits sur un disque.</li>
-<li><strong>Réseau local.</strong> Votre navigateur contacte directement votre box${NB}; rien n'atteint le serveur d’ombre.</li>
+<li><strong>Réseau local.</strong> Votre navigateur contacte directement votre box${NB}; rien n'atteint le serveur de quidam.</li>
 <li><strong>Solutions cochées.</strong> Elles restent dans la mémoire de l'onglet et disparaissent quand vous le fermez.</li>
 </ul>
 <h3>Base légale</h3>
@@ -122,8 +122,8 @@ function texts(lang, o, date) {
   if (lang === 'es') {
     return {
       title: 'Aviso legal y privacidad',
-      pageTitle: 'ombre: aviso legal y privacidad',
-      back: '← volver a ombre',
+      pageTitle: 'quidam: aviso legal y privacidad',
+      back: '← volver a quidam',
       legalTitle: 'aviso legal',
       legal: you.publishHomeAddress
         ? `<p>Este sitio lo publica, sin fines profesionales, una persona física, conforme al artículo 1-1 de la ley francesa n.º 2004-575 de 21 de junio de 2004 sobre la confianza en la economía digital (LCEN).</p>
@@ -135,16 +135,16 @@ function texts(lang, o, date) {
       ip: `<p>Los datos de geolocalización IP proceden de ${link('https://db-ip.com', 'DB-IP')} (IP to City Lite e IP to ASN Lite), con licencia ${link('https://creativecommons.org/licenses/by/4.0/deed.es', 'CC BY 4.0')}. Las fuentes IBM Plex Mono y VT323 tienen licencia SIL Open Font License.${source ? ` El código fuente del sitio es público: ${source}.` : ''}</p>
 <p>Los nombres de productos y servicios citados en las soluciones pertenecen a sus propietarios; se citan para describirlos. Nada está patrocinado y no hay enlaces de afiliado.</p>`,
       privacyTitle: 'privacidad',
-      privacy: `<p>En resumen: ombre no usa cookies, no guarda nada en tu navegador, no mide la audiencia y no escribe la dirección IP de nadie en un disco.</p>
+      privacy: `<p>En resumen: quidam no usa cookies, no guarda nada en tu navegador, no mide la audiencia y no escribe la dirección IP de nadie en un disco.</p>
 <h3>Quién es responsable</h3>
 <p>${name}, particular, que publica este sitio sin fines comerciales. Contacto: ${mail(you.email)}.</p>
 <h3>Qué trata el sitio, y por qué</h3>
 <ul>
 <li><strong>Mostrar las páginas.</strong> Como en cualquier sitio, tu navegador envía tu dirección IP al servidor para recibir las páginas. Sirve para responderte y luego se olvida. No se lleva ningún registro de accesos.</li>
 <li><strong>Análisis del navegador.</strong> Ocurre en tu navegador, solo cuando pulsas el botón. Las características leídas (pantalla, fuentes, tarjeta gráfica, etc.) solo sirven para mostrarte el resultado, a petición tuya. No se envía nada al servidor y no se guarda nada.</li>
-<li><strong>Comprobación de la conexión.</strong> Solo cuando pulsas el botón. El servidor de ombre lee la dirección IP de tu conexión, la busca en su propia copia de bases públicas (DB-IP Lite, lista de salidas de Tor, rangos de iCloud Private Relay), te devuelve el resultado y la olvida. El servidor STUN del sitio también te devuelve la dirección y el puerto que ve. No se contacta a ningún tercero sobre ti.</li>
+<li><strong>Comprobación de la conexión.</strong> Solo cuando pulsas el botón. El servidor de quidam lee la dirección IP de tu conexión, la busca en su propia copia de bases públicas (DB-IP Lite, lista de salidas de Tor, rangos de iCloud Private Relay), te devuelve el resultado y la olvida. El servidor STUN del sitio también te devuelve la dirección y el puerto que ve. No se contacta a ningún tercero sobre ti.</li>
 <li><strong>Protección contra abusos.</strong> Para evitar que una sola dirección sature el servicio, el servidor guarda en memoria tu dirección IP y un contador durante un minuto, y luego los borra. Nunca se escriben en un disco.</li>
-<li><strong>Red local.</strong> Tu navegador contacta directamente con tu router; nada llega al servidor de ombre.</li>
+<li><strong>Red local.</strong> Tu navegador contacta directamente con tu router; nada llega al servidor de quidam.</li>
 <li><strong>Soluciones marcadas.</strong> Se quedan en la memoria de la pestaña y desaparecen al cerrarla.</li>
 </ul>
 <h3>Base jurídica</h3>
@@ -161,8 +161,8 @@ function texts(lang, o, date) {
   }
   return {
     title: 'Legal notice and privacy',
-    pageTitle: 'ombre: legal notice and privacy',
-    back: '← back to ombre',
+    pageTitle: 'quidam: legal notice and privacy',
+    back: '← back to quidam',
     legalTitle: 'legal notice',
     legal: you.publishHomeAddress
       ? `<p>This site is published on a non-professional basis by a private individual, under article 1-1 of French law no. 2004-575 of 21 June 2004 on confidence in the digital economy (LCEN).</p>
@@ -174,16 +174,16 @@ function texts(lang, o, date) {
     ip: `<p>IP geolocation data by ${link('https://db-ip.com', 'DB-IP')} (IP to City Lite and IP to ASN Lite), licensed under ${link('https://creativecommons.org/licenses/by/4.0/', 'CC BY 4.0')}. The IBM Plex Mono and VT323 fonts are licensed under the SIL Open Font License.${source ? ` The site's source code is public: ${source}.` : ''}</p>
 <p>Product and service names in the fixes belong to their owners and are used to describe them. Nothing is sponsored and there are no affiliate links.</p>`,
     privacyTitle: 'privacy',
-    privacy: `<p>In short: ombre sets no cookie, stores nothing in your browser, runs no analytics and never writes anyone's IP address to disk.</p>
+    privacy: `<p>In short: quidam sets no cookie, stores nothing in your browser, runs no analytics and never writes anyone's IP address to disk.</p>
 <h3>Who is responsible</h3>
 <p>${name}, a private individual who runs this site on a non-commercial basis. Contact: ${mail(you.email)}.</p>
 <h3>What the site processes, and why</h3>
 <ul>
 <li><strong>Showing the pages.</strong> As with any website, your browser sends your IP address to the server to receive the pages. It is used to answer you, then forgotten. No access log is kept.</li>
 <li><strong>Browser scan.</strong> It runs in your browser, only when you press the button. The characteristics it reads (screen, fonts, graphics card and so on) are used only to show you the result, at your request. Nothing is sent to the server and nothing is kept.</li>
-<li><strong>Connection check.</strong> Only when you press the button. ombre's server reads your connection's IP address, looks it up in its own copy of public databases (DB-IP Lite, the Tor exit list, the iCloud Private Relay ranges), sends you the result and forgets it. The site's STUN server likewise sends back the address and port it sees. No third party is contacted about you.</li>
+<li><strong>Connection check.</strong> Only when you press the button. quidam's server reads your connection's IP address, looks it up in its own copy of public databases (DB-IP Lite, the Tor exit list, the iCloud Private Relay ranges), sends you the result and forgets it. The site's STUN server likewise sends back the address and port it sees. No third party is contacted about you.</li>
 <li><strong>Abuse protection.</strong> To stop one address from flooding the service, the server keeps your IP address and a counter in memory for one minute, then deletes them. They are never written to disk.</li>
-<li><strong>Local network.</strong> Your browser contacts your router directly; nothing reaches ombre's server.</li>
+<li><strong>Local network.</strong> Your browser contacts your router directly; nothing reaches quidam's server.</li>
 <li><strong>Ticked fixes.</strong> They stay in the tab's memory and vanish when you close it.</li>
 </ul>
 <h3>Legal basis</h3>
@@ -223,7 +223,7 @@ ${LANGS.map((l) => `<link rel="alternate" hreflang="${l}" href="/${l}/legal/">`)
 <body>
 <header class="site-header">
 <div class="wrap">
-<a class="brand pixel brand-link" href="/${lang}/">ombre<span class="brand-cursor" aria-hidden="true">_</span></a>
+<a class="brand pixel brand-link" href="/${lang}/">quidam<span class="brand-cursor" aria-hidden="true">_</span></a>
 <nav class="picker" aria-label="${label}">
 ${picker}
 </nav>

@@ -1,6 +1,6 @@
 # Review before launch
 
-Everything below must be ticked before ombre goes public. The French and Spanish text in
+Everything below must be ticked before quidam goes public. The French and Spanish text in
 `public/js/i18n/fr.js`, `public/js/i18n/es.js`, `public/fr/index.html` and `public/es/index.html`
 is a draft that no native speaker has checked yet. No fix step has been followed in a real browser yet.
 
@@ -108,9 +108,10 @@ Menu names to confirm:
 - [x] French legal notice (LCEN art. 1-1): same page, same command.
 - [x] Linked from the footer of every language page.
 - [ ] Fill in `legal/owner.json`, run `npm run legal`, and have the three legal pages read once (by a native speaker for fr/es).
-- [ ] Choose the repository licence: `LICENSE` is GPL-2.0 but `package.json` says ISC (docs/Go_live.md, step 0.2). `npm run preflight` warns until they agree.
-- [x] Name changed from "leakcheck" (taken: LeakCheck, leakcheck.io) to **ombre** (2026-10-25).
-- [ ] Trademark search for OMBRE in classes 9, 38, 42, 45 (TMview, INPI), result and date noted here; domain chosen (`ombre.fr` and `ombre.app` are taken) (docs/Go_live.md, step 0.1).
+- [x] Repository licence: GPL-2.0-only in both `LICENSE` and `package.json` (2026-10-25, docs/Go_live.md, step 0.2).
+- [x] Name changed from "leakcheck" (taken: LeakCheck, leakcheck.io) to "ombre", then to **quidam** (2026-10-25). "ombre" was dropped because of the French mark OMBRE, INPI FR 5193192 (class 42: software, SaaS).
+- [x] Trademark search for QUIDAM in classes 9, 38, 42, 45 (INPI, WIPO Global Brand Database; TMview blocked automated access), 2026-10-25: risk low to medium while the site stays non-commercial. Closest marks: FR 4521441 (Synexser France, class 42 SaaS) and FR 4578161 (class 45 social networking), neither visibly used; Cirque du Soleil's EU mark expired in 2017. Details in docs/Go_live.md, step 0.1.
+- [ ] Domain `quidam.io` bought (free on 2026-10-25; `quidam.fr`, `quidam.eu`, `quidam.app` are taken), owner data masking on.
 
 ## I. Manual checks still to do
 

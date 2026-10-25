@@ -1,16 +1,16 @@
-# systemd unit: starts ombre at boot, restarts it if it stops, and locks it down.
-# deploy.sh installs it as /etc/systemd/system/ombre.service on the first deploy.
+# systemd unit: starts quidam at boot, restarts it if it stops, and locks it down.
+# deploy.sh installs it as /etc/systemd/system/quidam.service on the first deploy.
 [Unit]
-Description=ombre privacy-check website
+Description=quidam privacy-check website
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=ombre
-Group=ombre
-WorkingDirectory=/opt/ombre/current
-EnvironmentFile=/etc/ombre/ombre.env
+User=quidam
+Group=quidam
+WorkingDirectory=/opt/quidam/current
+EnvironmentFile=/etc/quidam/quidam.env
 # 256 MB of JavaScript heap is plenty. The IP databases (about 140 MB) live outside that heap.
 ExecStart=/usr/bin/node --max-old-space-size=256 server/main.js
 Restart=always
@@ -21,10 +21,10 @@ RestartSec=2
 MemoryMax=900M
 LimitNOFILE=65536
 
-# The downloaded IP data lives in /var/lib/ombre (systemd creates it, owned by ombre).
-StateDirectory=ombre
+# The downloaded IP data lives in /var/lib/quidam (systemd creates it, owned by quidam).
+StateDirectory=quidam
 StateDirectoryMode=0750
-ReadWritePaths=/var/lib/ombre
+ReadWritePaths=/var/lib/quidam
 
 # Hardening: the process can read its code and write only its data folder.
 NoNewPrivileges=yes

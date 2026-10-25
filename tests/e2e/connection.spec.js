@@ -73,7 +73,7 @@ test('before the click nothing is sent, and the button works without answering a
   page.on('request', (r) => urls.push(r.url()));
   await open(page);
   await expect(page.locator('#connection h2')).toContainText('what sites see about your connection');
-  await expect(page.locator('#connection > .block-head .block-sub')).toHaveText("on a click · asks only ombre's server · keeps nothing");
+  await expect(page.locator('#connection > .block-head .block-sub')).toHaveText("on a click · asks only quidam's server · keeps nothing");
   const btn = page.locator('#run-connection');
   await expect(btn).toHaveText('SHOW WHAT SITES SEE');
   await expect(btn).not.toHaveAttribute('aria-disabled', 'true');
@@ -313,7 +313,7 @@ test('testing on this machine explains why no public address is shown', async ({
   await open(page);
   await check(page);
   await expect(page.locator('#conn-lines')).toHaveText('this machine or your local network');
-  await expect(page.locator('#conn-note')).toContainText("ombre can't see your public address from here");
+  await expect(page.locator('#conn-note')).toContainText("quidam can't see your public address from here");
   await expect(page.locator('#conn-question')).toBeHidden();
 });
 

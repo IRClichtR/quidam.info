@@ -212,7 +212,7 @@ function drawCanvas() {
   ctx.fillStyle = '#f60';
   ctx.fillRect(100, 1, 62, 20);
   ctx.fillStyle = '#069';
-  ctx.fillText('ombre, 0123 \u{1F50D}', 2, 15);
+  ctx.fillText('quidam, 0123 \u{1F50D}', 2, 15);
   ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
   ctx.beginPath();
   ctx.arc(50, 30, 25, 0, Math.PI * 2);

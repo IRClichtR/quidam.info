@@ -1,11 +1,11 @@
-# Caddy configuration for ombre. deploy.sh copies this file to /etc/caddy/Caddyfile,
+# Caddy configuration for quidam. deploy.sh copies this file to /etc/caddy/Caddyfile,
 # with __DOMAIN__ replaced by your domain (set in deploy/config.sh).
 #
 # What Caddy does here:
 # - gets and renews free HTTPS certificates by itself (Let's Encrypt or ZeroSSL), for every
 #   name listed below; nothing to do by hand, ever;
 # - redirects every http:// request to https:// by itself;
-# - passes each request to the ombre Node process, which listens only on 127.0.0.1:8080.
+# - passes each request to the quidam Node process, which listens only on 127.0.0.1:8080.
 #
 # Access logs: Caddy writes NO access log unless a `log` directive is added to a site block.
 # There is none on purpose: the visitors' IP addresses are never written to disk.

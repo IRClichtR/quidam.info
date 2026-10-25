@@ -199,7 +199,7 @@ describe('judgeConnection on this machine or a local network', () => {
       const fs = judge({ main: loop, v4: who({ ip: '127.0.0.1', country: null, city: null, asn: null, asOrg: null }), v6: loop, answer, reveal: true });
       expect(fs.map((f) => f.id)).toEqual(['publicIp']);
       expect(fs[0].verdict).toBe('unknown');
-      expect(fs[0].value).toBe("::1 · this machine or your local network: ombre can't see your public address from here");
+      expect(fs[0].value).toBe("::1 · this machine or your local network: quidam can't see your public address from here");
     }
   });
   it('a public family lookup wins over a local main lookup', () => {

@@ -140,7 +140,7 @@ describe('static serving', () => {
   });
   it('sends compressed copies with their own ETag, and 304 when the copy is current', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lc-'));
-    fs.writeFileSync(path.join(dir, 'app.js'), 'console.log("ombre");\n'.repeat(200));
+    fs.writeFileSync(path.join(dir, 'app.js'), 'console.log("quidam");\n'.repeat(200));
     fs.writeFileSync(path.join(dir, 'f.woff2'), Buffer.alloc(2000, 1));
     const m = await buildAllowlist(dir);
     const s = http.createServer(createApp({ cfg: loadConfig({}), staticMap: m, whoami: () => {} }));

@@ -1,5 +1,5 @@
 #cloud-config
-# ombre server setup, for Ubuntu 24.04 LTS on a small cloud server (written for Hetzner Cloud).
+# quidam server setup, for Ubuntu 24.04 LTS on a small cloud server (written for Hetzner Cloud).
 #
 # How to use it: when you create the server in the Hetzner console, open "Cloud config" and paste
 # this whole file there. The server then sets itself up on its first boot (about 3 to 5 minutes).
@@ -11,7 +11,7 @@
 #
 # What it does:
 # - creates `deploy`, the only account that can log in (by SSH key only, never by password),
-#   and `ombre`, a locked account that only runs the website;
+#   and `quidam`, a locked account that only runs the website;
 # - turns off root login and password login;
 # - installs Node.js 24, the Caddy web server, rsync, and automatic security updates
 #   (with an automatic reboot at 04:30 UTC when an update needs one);
@@ -20,7 +20,7 @@
 # - lets `deploy` run, without a password, only the few admin commands deploy.sh needs.
 
 users:
-  - name: ombre
+  - name: quidam
     system: true
     shell: /usr/sbin/nologin
     homedir: /nonexistent
@@ -52,7 +52,7 @@ packages:
 
 write_files:
   # SSH: keys only, no root.
-  - path: /etc/ssh/sshd_config.d/10-ombre.conf
+  - path: /etc/ssh/sshd_config.d/10-quidam.conf
     permissions: '0644'
     content: |
       PermitRootLogin no
@@ -77,7 +77,7 @@ write_files:
       Unattended-Upgrade::Remove-Unused-Dependencies "true";
 
   # Keep the system journal small and short-lived (it never holds visitor addresses, but keep it lean).
-  - path: /etc/systemd/journald.conf.d/10-ombre.conf
+  - path: /etc/systemd/journald.conf.d/10-quidam.conf
     permissions: '0644'
     content: |
       [Journal]
@@ -87,21 +87,21 @@ write_files:
   # The only admin commands `deploy` may run without a password (all used by deploy/deploy.sh).
   # Note: `deploy` is your own account and can install a service file, so treat its SSH key like
   # a root password. The list is here to avoid mistakes, not to contain a stolen key.
-  - path: /etc/sudoers.d/10-ombre-deploy
+  - path: /etc/sudoers.d/10-quidam-deploy
     permissions: '0440'
     content: |
       Cmnd_Alias LEAKCHECK_DEPLOY = \
-        /usr/bin/systemctl restart ombre, \
-        /usr/bin/systemctl status ombre, \
+        /usr/bin/systemctl restart quidam, \
+        /usr/bin/systemctl status quidam, \
         /usr/bin/systemctl status caddy, \
         /usr/bin/systemctl reload caddy, \
         /usr/bin/systemctl daemon-reload, \
-        /usr/bin/systemctl enable ombre, \
-        /usr/bin/journalctl -u ombre *, \
+        /usr/bin/systemctl enable quidam, \
+        /usr/bin/journalctl -u quidam *, \
         /usr/bin/journalctl -u caddy *, \
         /usr/bin/install -o root -g root -m 0644 /home/deploy/staging/Caddyfile /etc/caddy/Caddyfile, \
-        /usr/bin/install -o root -g ombre -m 0640 /home/deploy/staging/ombre.env /etc/ombre/ombre.env, \
-        /usr/bin/install -o root -g root -m 0644 /home/deploy/staging/ombre.service /etc/systemd/system/ombre.service
+        /usr/bin/install -o root -g quidam -m 0640 /home/deploy/staging/quidam.env /etc/quidam/quidam.env, \
+        /usr/bin/install -o root -g root -m 0644 /home/deploy/staging/quidam.service /etc/systemd/system/quidam.service
       deploy ALL=(root) NOPASSWD: LEAKCHECK_DEPLOY
 
 runcmd:
@@ -115,10 +115,10 @@ runcmd:
   - chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg /etc/apt/sources.list.d/caddy-stable.list
   - apt-get update
   - DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs caddy
-  # Folders: releases belong to deploy and are readable by the ombre group (setgid: new files inherit the group).
-  - install -d -o deploy -g ombre -m 2750 /opt/ombre /opt/ombre/releases
-  - install -d -o root -g ombre -m 0750 /etc/ombre
-  - install -d -o ombre -g ombre -m 0750 /var/lib/ombre
+  # Folders: releases belong to deploy and are readable by the quidam group (setgid: new files inherit the group).
+  - install -d -o deploy -g quidam -m 2750 /opt/quidam /opt/quidam/releases
+  - install -d -o root -g quidam -m 0750 /etc/quidam
+  - install -d -o quidam -g quidam -m 0750 /var/lib/quidam
   - install -d -o deploy -g deploy -m 0700 /home/deploy/staging
   # Firewall: deny everything coming in, except SSH, web (HTTP/1, HTTP/2 and HTTP/3) and STUN.
   - ufw default deny incoming
@@ -134,4 +134,4 @@ runcmd:
   - systemctl enable --now unattended-upgrades
   - systemctl enable --now caddy
 
-final_message: "ombre server ready after $UPTIME seconds. Next: run deploy/deploy.sh --first-run from your computer."
+final_message: "quidam server ready after $UPTIME seconds. Next: run deploy/deploy.sh --first-run from your computer."

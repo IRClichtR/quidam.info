@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Puts the current version of ombre on the server, from your computer.
+# Puts the current version of quidam on the server, from your computer.
 #
 #   deploy/deploy.sh --first-run    the very first time (also installs Caddy and service settings)
 #   deploy/deploy.sh                every later update
@@ -7,8 +7,8 @@
 #
 # Options: --allow-dirty  deploy even with uncommitted changes (not recommended).
 #
-# Each version goes into its own folder on the server, /opt/ombre/releases/<date>-<commit>.
-# /opt/ombre/current points to the one in use. If the new version does not answer its
+# Each version goes into its own folder on the server, /opt/quidam/releases/<date>-<commit>.
+# /opt/quidam/current points to the one in use. If the new version does not answer its
 # health check within 30 s, the script points back to the previous one by itself.
 set -euo pipefail
 
@@ -37,7 +37,7 @@ SSH_USER="${SSH_USER:-deploy}"
 SHIP_VCR_FONT="${SHIP_VCR_FONT:-0}"
 [ "$DOMAIN" != "example.org" ] || fail "DOMAIN in deploy/config.sh is still the example. Put your own domain."
 TARGET="$SSH_USER@$SERVER"
-BASE=/opt/ombre
+BASE=/opt/quidam
 
 # Run a script on the server. Values are passed as arguments, so nothing is pasted into the script text.
 remote() { ssh -o BatchMode=yes "$TARGET" bash -s -- "$@"; }
@@ -52,7 +52,7 @@ SWITCH_AND_RESTART='
 switch() {
   ln -sfn "$1" '"$BASE"'/current.new
   mv -T '"$BASE"'/current.new '"$BASE"'/current
-  sudo /usr/bin/systemctl restart ombre
+  sudo /usr/bin/systemctl restart quidam
 }
 healthy() {
   for _ in $(seq 1 30); do
@@ -72,7 +72,7 @@ prev=\$(ls -1d $BASE/releases/*/ | sed 's:/\$::' | sort | awk -v cur="\$cur" '\$
 [ -n "\$prev" ] || { echo "No older version to go back to."; exit 1; }
 echo "From \$(basename "\$cur") to \$(basename "\$prev")"
 switch "\$prev"
-healthy && echo "The previous version is running." || { echo "The previous version does not answer either. See: sudo journalctl -u ombre -n 50"; exit 1; }
+healthy && echo "The previous version is running." || { echo "The previous version does not answer either. See: sudo journalctl -u quidam -n 50"; exit 1; }
 EOF
   exit 0
 fi
@@ -97,7 +97,7 @@ EXCLUDES=(--exclude=/.git --exclude=/node_modules --exclude=/data --exclude=/tes
   --exclude=/playwright-report --exclude=/docs --exclude=/.superpowers --exclude=/deploy/config.sh
   --exclude=/legal/owner.json --exclude='.env*' --exclude=.DS_Store)
 if [ "$SHIP_VCR_FONT" != 1 ]; then EXCLUDES+=(--exclude='/public/fonts/VCR*'); fi
-# Folders 2750 and files 640: readable by the ombre group only (the folder's setgid gives them that group).
+# Folders 2750 and files 640: readable by the quidam group only (the folder's setgid gives them that group).
 rsync -rlpt --delete --chmod=D2750,F640 "${EXCLUDES[@]}" ./ "$TARGET:$BASE/releases/$RELEASE/"
 
 say "Installing the production dependencies on the server"
@@ -108,22 +108,22 @@ npm ci --omit=dev --no-audit --no-fund --loglevel=error
 chmod -R g+rX,o-rwx node_modules
 EOF
 
-if [ "$FIRST_RUN" = 1 ] || ! remote <<<'test -f /etc/ombre/ombre.env'; then
+if [ "$FIRST_RUN" = 1 ] || ! remote <<<'test -f /etc/quidam/quidam.env'; then
   say "Installing the Caddy, service and environment settings for $DOMAIN"
   tmp="$(mktemp -d)"
   sed "s/__DOMAIN__/$DOMAIN/g" deploy/Caddyfile.template > "$tmp/Caddyfile"
-  sed "s/__DOMAIN__/$DOMAIN/g" deploy/ombre.env.template > "$tmp/ombre.env"
-  cp deploy/ombre.service "$tmp/ombre.service"
-  rsync -t "$tmp/Caddyfile" "$tmp/ombre.env" "$tmp/ombre.service" "$TARGET:/home/deploy/staging/"
+  sed "s/__DOMAIN__/$DOMAIN/g" deploy/quidam.env.template > "$tmp/quidam.env"
+  cp deploy/quidam.service "$tmp/quidam.service"
+  rsync -t "$tmp/Caddyfile" "$tmp/quidam.env" "$tmp/quidam.service" "$TARGET:/home/deploy/staging/"
   rm -rf "$tmp"
   remote <<'EOF'
 set -euo pipefail
 caddy validate --adapter caddyfile --config /home/deploy/staging/Caddyfile >/dev/null
 sudo /usr/bin/install -o root -g root -m 0644 /home/deploy/staging/Caddyfile /etc/caddy/Caddyfile
-sudo /usr/bin/install -o root -g ombre -m 0640 /home/deploy/staging/ombre.env /etc/ombre/ombre.env
-sudo /usr/bin/install -o root -g root -m 0644 /home/deploy/staging/ombre.service /etc/systemd/system/ombre.service
+sudo /usr/bin/install -o root -g quidam -m 0640 /home/deploy/staging/quidam.env /etc/quidam/quidam.env
+sudo /usr/bin/install -o root -g root -m 0644 /home/deploy/staging/quidam.service /etc/systemd/system/quidam.service
 sudo /usr/bin/systemctl daemon-reload
-sudo /usr/bin/systemctl enable ombre
+sudo /usr/bin/systemctl enable quidam
 sudo /usr/bin/systemctl reload caddy
 echo "Caddy will now ask for HTTPS certificates. That works only once the DNS records point to this server."
 EOF
@@ -139,7 +139,7 @@ if healthy; then
   echo "Version $RELEASE answers its health check."
 else
   echo "Version $RELEASE does not answer. Its last log lines:"
-  sudo /usr/bin/journalctl -u ombre -n 30 --no-pager || true
+  sudo /usr/bin/journalctl -u quidam -n 30 --no-pager || true
   if [ -n "\$prev" ] && [ -d "\$prev" ]; then
     echo "Going back to \$(basename "\$prev")."
     switch "\$prev"

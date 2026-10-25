@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sets up a fresh Ubuntu 24.04 server for ombre, for hosts that have no "cloud config" box
+# Sets up a fresh Ubuntu 24.04 server for quidam, for hosts that have no "cloud config" box
 # (on Hetzner, paste deploy/cloud-init.yaml at creation instead: it does exactly the same).
 # Keep the two files in step: any change to one belongs in the other.
 #
@@ -29,8 +29,8 @@ apt-get update
 apt-get -y upgrade
 apt-get install -y ca-certificates curl gnupg debian-keyring debian-archive-keyring apt-transport-https rsync ufw unattended-upgrades
 
-say "Creating the accounts: deploy (you, by SSH key) and ombre (runs the site, cannot log in)"
-id ombre >/dev/null 2>&1 || useradd --system --shell /usr/sbin/nologin --no-create-home --home-dir /nonexistent ombre
+say "Creating the accounts: deploy (you, by SSH key) and quidam (runs the site, cannot log in)"
+id quidam >/dev/null 2>&1 || useradd --system --shell /usr/sbin/nologin --no-create-home --home-dir /nonexistent quidam
 id deploy >/dev/null 2>&1 || useradd --create-home --shell /bin/bash deploy
 passwd -l deploy >/dev/null
 install -d -o deploy -g deploy -m 0700 /home/deploy/.ssh
@@ -39,7 +39,7 @@ chown deploy:deploy /home/deploy/.ssh/authorized_keys
 chmod 0600 /home/deploy/.ssh/authorized_keys
 
 say "SSH: keys only, no root"
-cat > /etc/ssh/sshd_config.d/10-ombre.conf <<'EOF'
+cat > /etc/ssh/sshd_config.d/10-quidam.conf <<'EOF'
 PermitRootLogin no
 PasswordAuthentication no
 KbdInteractiveAuthentication no
@@ -61,30 +61,30 @@ timedatectl set-timezone Etc/UTC
 
 say "A small system journal, kept 7 days"
 install -d /etc/systemd/journald.conf.d
-cat > /etc/systemd/journald.conf.d/10-ombre.conf <<'EOF'
+cat > /etc/systemd/journald.conf.d/10-quidam.conf <<'EOF'
 [Journal]
 SystemMaxUse=200M
 MaxRetentionSec=7day
 EOF
 
 say "The admin commands deploy.sh may run without a password"
-cat > /etc/sudoers.d/10-ombre-deploy <<'EOF'
+cat > /etc/sudoers.d/10-quidam-deploy <<'EOF'
 Cmnd_Alias LEAKCHECK_DEPLOY = \
-  /usr/bin/systemctl restart ombre, \
-  /usr/bin/systemctl status ombre, \
+  /usr/bin/systemctl restart quidam, \
+  /usr/bin/systemctl status quidam, \
   /usr/bin/systemctl status caddy, \
   /usr/bin/systemctl reload caddy, \
   /usr/bin/systemctl daemon-reload, \
-  /usr/bin/systemctl enable ombre, \
-  /usr/bin/journalctl -u ombre *, \
+  /usr/bin/systemctl enable quidam, \
+  /usr/bin/journalctl -u quidam *, \
   /usr/bin/journalctl -u caddy *, \
   /usr/bin/install -o root -g root -m 0644 /home/deploy/staging/Caddyfile /etc/caddy/Caddyfile, \
-  /usr/bin/install -o root -g ombre -m 0640 /home/deploy/staging/ombre.env /etc/ombre/ombre.env, \
-  /usr/bin/install -o root -g root -m 0644 /home/deploy/staging/ombre.service /etc/systemd/system/ombre.service
+  /usr/bin/install -o root -g quidam -m 0640 /home/deploy/staging/quidam.env /etc/quidam/quidam.env, \
+  /usr/bin/install -o root -g root -m 0644 /home/deploy/staging/quidam.service /etc/systemd/system/quidam.service
 deploy ALL=(root) NOPASSWD: LEAKCHECK_DEPLOY
 EOF
-chmod 0440 /etc/sudoers.d/10-ombre-deploy
-visudo -cf /etc/sudoers.d/10-ombre-deploy
+chmod 0440 /etc/sudoers.d/10-quidam-deploy
+visudo -cf /etc/sudoers.d/10-quidam-deploy
 
 say "Node.js 24 and Caddy, from their official package repositories"
 install -d -m 0755 /etc/apt/keyrings
@@ -97,9 +97,9 @@ apt-get update
 apt-get install -y nodejs caddy
 
 say "Folders for the site"
-install -d -o deploy -g ombre -m 2750 /opt/ombre /opt/ombre/releases
-install -d -o root -g ombre -m 0750 /etc/ombre
-install -d -o ombre -g ombre -m 0750 /var/lib/ombre
+install -d -o deploy -g quidam -m 2750 /opt/quidam /opt/quidam/releases
+install -d -o root -g quidam -m 0750 /etc/quidam
+install -d -o quidam -g quidam -m 0750 /var/lib/quidam
 install -d -o deploy -g deploy -m 0700 /home/deploy/staging
 
 say "Firewall: only SSH, web and STUN come in"
