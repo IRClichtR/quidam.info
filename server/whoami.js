@@ -1,8 +1,4 @@
 // @ts-check
-
-// The /api/whoami endpoint: it tells a visitor what we see about their IP (country, city,
-// network, Tor, Private Relay). We never store or log the IP; it is looked up, sent back, and forgotten.
-
 // The /api/whoami endpoint: it tells a visitor what we see about their IP (country, city,
 // network, Tor, Private Relay). We never store or log the IP; it is looked up, sent back, and forgotten.
 import net from 'node:net';
@@ -17,8 +13,6 @@ import net from 'node:net';
 /**
  * @param {string} ip
  * @param {Data} data
- // Both lookups return null for unknown addresses, hence the ?. and ?? chains.
- // "asn" is the Autonomous System Number: the id of the network (usually an ISP) that owns the IP.
  * @returns {Whoami}
  */
 export function lookup(ip, data) {
@@ -33,31 +27,34 @@ export function lookup(ip, data) {
     city: c?.city?.names?.en ?? null,
     asn: a?.autonomous_system_number ?? null,
     asOrg: a?.autonomous_system_organization ?? null,
-    // Security: we use the socket's address, never X-Forwarded-For or similar headers. Those can
-    // be set by the visitor, so reading them would let anyone claim to be someone else.
     tor: data.lists.isTor(ip),
     privateRelay: data.lists.isRelay(ip),
   };
 }
 
-// Security: we use the socket's address, never X-Forwarded-For or similar headers. Those can
-// be set by the visitor, so reading them would let anyone claim to be someone else.
 // Unwrap IPv4-in-IPv6 ("::ffff:1.2.3.4") so IPv4 visitors show as IPv4.
+/** @param {string} ip */
+const unwrap = (ip) => ip.replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, '');
+
+// Security: X-Forwarded-For can be written by anyone, so it is read only when the request
+// comes from our own reverse proxy (an address listed in TRUST_PROXY). Even then we take only
+// the right-most entry, the one that proxy appended; entries further left came from the visitor.
 /**
- // In development only, an override can stand in for localhost addresses.
- * The socket address only; forwarding headers are never read.
+ * The visitor's address: the socket's, or the proxy's right-most X-Forwarded-For entry
+ * when the socket is a trusted proxy. In development only, an override stands in.
  * @param {import('node:http').IncomingMessage} req
  * @param {import('./config.js').Config} cfg
  * @returns {string}
  */
 export function clientIp(req, cfg) {
-  // Unwrap IPv4-in-IPv6 ("::ffff:1.2.3.4") so IPv4 visitors show as IPv4.
-  const ip = (req.socket.remoteAddress ?? '').replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/i, '');
-  // In development only, an override can stand in for localhost addresses.
+  let ip = unwrap(req.socket.remoteAddress ?? '');
+  if (cfg.trustProxy.includes(ip)) {
+    const header = req.headers['x-forwarded-for'];
+    const last = unwrap([header ?? ''].flat().join(',').split(',').pop()?.trim() ?? '');
+    if (net.isIP(last)) ip = last;
+  }
   if (!cfg.dev) return ip;
   return (net.isIP(ip) === 6 ? cfg.devClientIp6 : cfg.devClientIp4) ?? ip;
-// no-store: the answer is about this visitor and must never be cached or shared.
-// The CORS header lets our own site (and only it) read the answer from the IPv4/IPv6 hosts.
 }
 
 /**
@@ -67,17 +64,13 @@ export function clientIp(req, cfg) {
  */
 export function createWhoamiHandler({ cfg, getData, limiter }) {
   /** @param {import('node:http').ServerResponse} res @param {number} status @param {unknown} [body] */
-  // no-store: the answer is about this visitor and must never be cached or shared.
-  // The CORS header lets our own site (and only it) read the answer from the IPv4/IPv6 hosts.
-  // Order matters: method check, then rate limit, then data check. Any unexpected error
-  // becomes a generic 500 so no internal details leak.
   const send = (res, status, body) => {
     res.writeHead(status, {
       'content-type': 'application/json; charset=utf-8',
-      // 429 = Too Many Requests.
+      // no-store: the answer is about this visitor and must never be cached or shared.
       'cache-control': 'no-store',
+      // The CORS header lets our own site (and only it) read the answer from the IPv4/IPv6 hosts.
       'access-control-allow-origin': cfg.siteOrigin,
-      // 503 = data files not loaded yet (first start with no network).
       vary: 'Origin',
       ...(status === 405 ? { allow: 'GET' } : {}),
     });

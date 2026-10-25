@@ -1,5 +1,4 @@
 // @ts-check
-// DOM rendering for findings and the summary. Text goes in through textContent only (CSP, no innerHTML).
 // Turns findings into page elements. Text always goes in through textContent, never innerHTML,
 // so a hostile value (say, a strange GPU name) can never inject markup. The page's CSP
 // (Content Security Policy) forbids inline scripts and styles anyway.
@@ -57,8 +56,8 @@ export function el(tag, className, text) {
   return node;
 }
 
-/** @param {Verdict} verdict @param {T} t */
-function tag(verdict, t) {
+/** A verdict badge: icon and word, never colour alone. @param {Verdict} verdict @param {T} t */
+export function tag(verdict, t) {
   const node = el('span', `tag tag-${verdict}`);
   node.append(icon(verdict), t(`tag.${verdict}`));
   return node;
@@ -112,15 +111,18 @@ export function renderFindings(listEl, findings, t) {
   listEl.replaceChildren(...rows);
 }
 
+// Recognisability, not "uniqueness": we can't measure uniqueness without a crowd to compare with,
+// so the tile gives a plain three-step scale from the number of leaking fingerprint signals.
+const RECOG = /** @type {const} */ ({ low: 'low', medium: 'mid', high: 'high' });
+
 /**
- * Three tiles: how many leak, how many are protected, and uniqueness in words
- * ("not scanned yet" until the browser scan has run).
+ * The summary tiles: how many leak, how many are protected, the fix count with a link to the fixes,
+ * and how recognizable the browser is. The last two appear once the browser scan has run.
  * @param {HTMLElement} tilesEl
  * @param {Finding[]} findings
- * @param {T} t
- * @param {boolean} [scanned] whether the browser scan has run
+ * @param {{t: T, tPlural: (key: string, n: number) => string, scanned: boolean, problems: number}} opts
  */
-export function renderSummary(tilesEl, findings, t, scanned = true) {
+export function renderSummary(tilesEl, findings, { t, tPlural, scanned, problems }) {
   // Intl.NumberFormat writes numbers the way the page language does.
   const num = new Intl.NumberFormat(document.documentElement.lang || 'en');
   /** @param {'leak'|'ok'} kind */
@@ -131,10 +133,19 @@ export function renderSummary(tilesEl, findings, t, scanned = true) {
     tile.append(big, el('p', 'tile-text', t(`summary.${kind}`)));
     return tile;
   };
-  const unique = el('div', 'tile');
-  // Uniqueness is only meaningful once the browser scan ran, so before that it reads 'not scanned yet'.
-  unique.append(el('div', 'tile-num tile-word', t(`summary.unique.${scanned ? uniqueness(findings) : 'none'}`)), el('p', 'tile-text', t('summary.unique.sub')));
-  tilesEl.replaceChildren(countTile('leak'), countTile('ok'), unique);
+  const tiles = [countTile('leak'), countTile('ok')];
+  if (scanned) {
+    const fix = el('div', 'tile tile-fix');
+    fix.dataset.tile = 'fix';
+    const link = /** @type {HTMLAnchorElement} */ (el('a', 'btn btn-small', t('fix.tile.cta')));
+    link.href = '#fix';
+    fix.append(el('div', 'tile-num tile-word', tPlural('fix.tile.count', problems)), el('p', 'tile-text', t('fix.tile.sub')), link);
+    const recog = el('div', 'tile');
+    recog.dataset.tile = 'recog';
+    recog.append(el('div', 'tile-num tile-word', t(`summary.recog.${RECOG[uniqueness(findings)]}`)), el('p', 'tile-text', t('summary.recog.sub')));
+    tiles.push(fix, recog);
+  }
+  tilesEl.replaceChildren(...tiles);
 }
 
 // The live region (aria-live) makes screen readers speak status changes without moving focus.

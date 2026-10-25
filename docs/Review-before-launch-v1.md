@@ -1,6 +1,6 @@
 # Review before launch
 
-Everything below must be ticked before leakcheck goes public. The French and Spanish text in
+Everything below must be ticked before ombre goes public. The French and Spanish text in
 `public/js/i18n/fr.js`, `public/js/i18n/es.js`, `public/fr/index.html` and `public/es/index.html`
 is a draft that no native speaker has checked yet. No fix step has been followed in a real browser yet.
 
@@ -109,7 +109,8 @@ Menu names to confirm:
 - [x] Linked from the footer of every language page.
 - [ ] Fill in `legal/owner.json`, run `npm run legal`, and have the three legal pages read once (by a native speaker for fr/es).
 - [ ] Choose the repository licence: `LICENSE` is GPL-2.0 but `package.json` says ISC (docs/Go_live.md, step 0.2). `npm run preflight` warns until they agree.
-- [ ] Decide about the name: "LeakCheck" (leakcheck.io) is an existing commercial service in the same field (docs/Go_live.md, step 0.1).
+- [x] Name changed from "leakcheck" (taken: LeakCheck, leakcheck.io) to **ombre** (2026-10-25).
+- [ ] Trademark search for OMBRE in classes 9, 38, 42, 45 (TMview, INPI), result and date noted here; domain chosen (`ombre.fr` and `ombre.app` are taken) (docs/Go_live.md, step 0.1).
 
 ## I. Manual checks still to do
 

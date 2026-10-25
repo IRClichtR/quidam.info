@@ -7,7 +7,7 @@
 // A fingerprint is the mix of small, harmless-looking details (screen, fonts, GPU...) that together
 // single out one browser, so a site can recognise you without cookies. The more of these a
 // browser shows in a distinctive way, the more unique it is.
-/** @typedef {'screen'|'timezone'|'languages'|'gpu'|'fonts'|'canvas'|'audio'|'cpu'|'webrtcLocal'|'gpc'|'publicIp'|'provider'|'location'|'vpn4'|'vpn6'|'router'|'lnaPrompt'|'otherDevices'} FindingId */
+/** @typedef {'screen'|'timezone'|'languages'|'gpu'|'fonts'|'canvas'|'audio'|'cpu'|'webrtcLocal'|'gpc'|'publicIp'|'provider'|'location'|'router'|'lnaPrompt'|'otherDevices'} FindingId */
 /** @typedef {'leak'|'ok'|'unknown'} Verdict */
 /** @typedef {{id: FindingId, verdict: Verdict, value: string}} Finding */
 /** @typedef {(key: string, vars?: Record<string, string|number|undefined>) => string} T */
@@ -212,7 +212,7 @@ function drawCanvas() {
   ctx.fillStyle = '#f60';
   ctx.fillRect(100, 1, 62, 20);
   ctx.fillStyle = '#069';
-  ctx.fillText('leakcheck, 0123 \u{1F50D}', 2, 15);
+  ctx.fillText('ombre, 0123 \u{1F50D}', 2, 15);
   ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
   ctx.beginPath();
   ctx.arc(50, 30, 25, 0, Math.PI * 2);

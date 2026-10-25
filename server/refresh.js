@@ -1,11 +1,4 @@
 // @ts-check
-
-// Keeps the lookup data fresh. It loads the saved files at startup, downloads new copies
-// on a timer, and swaps them in safely. whoami.js reads the result through current().
-// The sources are the DB-IP Lite databases (.mmdb, a compact binary format for IP lookups:
-// city/country, and ASN = the number and name of the network company that owns the IP),
-// the Tor exit list, and the Apple Private Relay ranges.
-
 // Keeps the lookup data fresh. It loads the saved files at startup, downloads new copies
 // on a timer, and swaps them in safely. whoami.js reads the result through current().
 // The sources are the DB-IP Lite databases (.mmdb, a compact binary format for IP lookups:
@@ -16,9 +9,7 @@ import net from 'node:net';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { Reader } from 'mmdb-lib';
-import { createIpLists } from './lists.js';
-// A file must pass its parser before it is used. A truncated or junk download throws here
-// and is ignored, so a bad download can never replace a good copy.
+import { createTorList, createRelayList } from './lists.js';
 
 /** @typedef {import('./whoami.js').Data} Data */
 
@@ -30,32 +21,30 @@ const DAY = 24 * HOUR;
 /** @param {Buffer} buf */
 const parseMmdb = (buf) => new Reader(buf);
 
+// The two lists are turned into their checks here, once per download, so a refresh of one
+// never rebuilds the other (the relay list takes about a second to build).
 /** @param {Buffer} buf */
 const parseTor = (buf) => {
   const text = buf.toString();
   if (!text.split('\n').some((l) => net.isIP(l.trim()))) throw new Error('empty tor list');
-  return text;
+  return createTorList(text);
 };
 
 /** @param {Buffer} buf */
 const parseRelay = (buf) => {
   const text = buf.toString();
   if (!text.split('\n').some((l) => l.includes('/'))) throw new Error('empty relay list');
-  return text;
+  return createRelayList(text);
 };
 
 /**
  * @param {{ dataDir: string, fetch: typeof fetch, now?: () => Date }} opts
  */
-// DB-IP publishes one file per month. Early in a month the new file may not exist yet,
-// so we try this month, then last month.
 export function createDataStore({ dataDir, fetch: doFetch, now = () => new Date() }) {
   /** @type {Record<string, any>} */
   const parsed = {};
   /** @type {Data|null} */
   let cached = null;
-// How often each source is refreshed: databases weekly, the Tor list hourly (it changes
-// fast), the relay ranges daily.
 
   /** @param {Date} d */
   const ym = (d) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -81,7 +70,6 @@ export function createDataStore({ dataDir, fetch: doFetch, now = () => new Date(
       file: 'tor-exits.txt',
       every: HOUR,
       parse: parseTor,
-      // Store the parsed value and drop the cached bundle, so current() rebuilds it.
       gunzip: false,
       urls: () => ['https://check.torproject.org/torbulkexitlist'],
     },
@@ -93,9 +81,8 @@ export function createDataStore({ dataDir, fetch: doFetch, now = () => new Date(
       urls: () => ['https://mask-api.icloud.com/egress-ip-ranges.csv'],
     },
   ];
-// Errors are ignored on purpose: the old copy stays in use.
 
-  // Store the parsed value and drop the cached bundle, so current() rebuilds it.
+  // Store the parsed value and drop the cached bundle, so current() regroups the four.
   /** @param {string} file @param {any} value */
   const accept = (file, value) => {
     parsed[file] = value;
@@ -103,15 +90,10 @@ export function createDataStore({ dataDir, fetch: doFetch, now = () => new Date(
   };
 
   /** @param {typeof sources[number]} s */
-  // A 404 on the gzip databases means this month's file is not out yet: try last month's.
   async function loadOne(s) {
     try {
       accept(s.file, s.parse(await fs.readFile(path.join(dataDir, s.file))));
-    // The download is gzip-compressed for the databases; unpack it before parsing.
     } catch {
-      // Errors are ignored on purpose: the old copy stays in use.
-      // Write to a temporary file, then rename. A rename is atomic, so a reader or a crash
-      // never sees a half-written file.
       // missing or corrupt: keep whatever we have
     }
   }
@@ -134,8 +116,6 @@ export function createDataStore({ dataDir, fetch: doFetch, now = () => new Date(
         const tmp = `${dest}.tmp`;
         try {
           await fs.writeFile(tmp, buf);
-          // Built lazily and cached. Returns null until all four sources have loaded at least once
-          // (the handler then answers 503).
           await fs.rename(tmp, dest);
         } catch (e) {
           await fs.rm(tmp, { force: true });
@@ -145,7 +125,7 @@ export function createDataStore({ dataDir, fetch: doFetch, now = () => new Date(
         return;
       }
     } catch {
-      // keep the last good copy
+      // Errors are ignored on purpose: the last good copy stays in use.
     }
   }
 
@@ -153,19 +133,17 @@ export function createDataStore({ dataDir, fetch: doFetch, now = () => new Date(
   let timers = [];
 
   return {
-    /** @returns {Data|null} */
     // Built lazily and cached. Returns null until all four sources have loaded at least once
     // (the handler then answers 503).
-    // Stale means: the file is missing, or older than its refresh interval.
+    /** @returns {Data|null} */
     current() {
       if (cached) return cached;
       if (!sources.every((s) => parsed[s.file])) return null;
       cached = {
         city: parsed['dbip-city-lite.mmdb'],
         asn: parsed['dbip-asn-lite.mmdb'],
-        lists: createIpLists({ torText: parsed['tor-exits.txt'], relayCsv: parsed['relay-ranges.csv'] }),
+        lists: { isTor: parsed['tor-exits.txt'], isRelay: parsed['relay-ranges.csv'] },
       };
-      // unref() lets the process exit even though these timers are still scheduled.
       return cached;
     },
     async loadFromDisk() {
@@ -177,8 +155,8 @@ export function createDataStore({ dataDir, fetch: doFetch, now = () => new Date(
      * @param {{ onlyStale?: boolean }} [opts]
      */
     async refreshAll({ onlyStale = false } = {}) {
-      /** @param {typeof sources[number]} s */
       // Stale means: the file is missing, or older than its refresh interval.
+      /** @param {typeof sources[number]} s */
       const stale = async (s) => {
         const st = await fs.stat(path.join(dataDir, s.file)).catch(() => null);
         return !st || now().getTime() - st.mtimeMs >= s.every;

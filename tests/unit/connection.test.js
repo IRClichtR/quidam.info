@@ -3,6 +3,7 @@ import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { loadStrings, t } from '../../public/js/i18n.js';
 import {
   maskIp, judgeConnection, compareVpnOff, fetchWhoami, gatherIce, stunUrls, primaryLookup, isLocalIp,
+  describeConnection, vpnChecks, judgeWebrtcLocal, placeName, providerName,
 } from '../../public/js/connection.js';
 
 /** @typedef {import('../../server/whoami.js').Whoami} Whoami */
@@ -18,11 +19,12 @@ const V6 = who({ ip: '2001:480:10::1', family: 6, country: 'US', city: 'San Dieg
 /** @param {Partial<import('../../public/js/connection.js').Ice>} [over] */
 const ice = (over = {}) => ({ v4: [], v6: [], local: ['a1b2.local'], ...over });
 /** @param {Partial<Parameters<typeof judgeConnection>[0]>} over */
-const judge = (over) => judgeConnection({
-  main: who(), v4: who(), v6: V6, ice: ice(), usesVpn: true, ...over,
-}, t);
+const judge = (over) => judgeConnection({ main: who(), v4: who(), v6: V6, answer: 'yes', ...over }, t);
+/** @param {Partial<Parameters<typeof vpnChecks>[0]>} over */
+const checks = (over) => vpnChecks({ main: who(), v4: who(), v6: V6, ice: ice(), lang: 'en', ...over }, t);
 /** @param {import('../../public/js/browser.js').Finding[]} fs @param {string} id */
 const find = (fs, id) => fs.find((f) => f.id === id);
+const IDS = ['publicIp', 'provider', 'location'];
 
 beforeAll(async () => { await loadStrings('en'); });
 
@@ -35,198 +37,146 @@ describe('maskIp', () => {
 });
 
 describe('judgeConnection', () => {
-  it('with a VPN: identity rows, both VPN checks, then the local IP, in order', () => {
-    expect(judge({}).map((f) => f.id)).toEqual(['publicIp', 'provider', 'location', 'vpn4', 'vpn6', 'webrtcLocal']);
+  it('gives the public IP, provider and location, in order, and nothing about WebRTC', () => {
+    expect(judge({}).map((f) => f.id)).toEqual(IDS);
   });
 
-  it('without a VPN: no VPN check rows', () => {
-    expect(judge({ usesVpn: false }).map((f) => f.id)).toEqual(['publicIp', 'provider', 'location', 'webrtcLocal']);
-  });
-
-  it('without a VPN: public IP, provider and location read LEAK', () => {
-    const fs = judge({ usesVpn: false });
-    for (const id of ['publicIp', 'provider', 'location']) expect(find(fs, id)?.verdict).toBe('leak');
-    expect(find(fs, 'location')?.value).toBe('London, GB');
-    expect(find(fs, 'provider')?.value).toBe('Andrews & Arnold Ltd · AS20712');
-  });
-
-  it('with a VPN: identity rows read CAN\'T TELL until the VPN-off comparison', () => {
-    const fs = judge({});
-    for (const id of ['publicIp', 'provider', 'location']) expect(find(fs, id)?.verdict).toBe('unknown');
-    const other = judge({ vpnOff: 'otherFamily' });
-    for (const id of ['publicIp', 'provider', 'location']) expect(find(other, id)?.verdict).toBe('unknown');
-  });
-
-  it('with a VPN: a changed address once the VPN is off reads OK, the same address LEAK', () => {
-    const hidden = judge({ vpnOff: 'hidden' });
-    const same = judge({ vpnOff: 'same' });
-    for (const id of ['publicIp', 'provider', 'location']) {
-      expect(find(hidden, id)?.verdict).toBe('ok');
-      expect(find(same, id)?.verdict).toBe('leak');
+  it('"yes" and "I\'m not sure" read LEAK', () => {
+    for (const answer of /** @type {const} */ (['yes', 'unsure'])) {
+      const fs = judge({ answer });
+      for (const id of IDS) expect(find(fs, id)?.verdict, `${answer} ${id}`).toBe('leak');
     }
+    expect(find(judge({}), 'location')?.value).toBe('London, GB');
+    expect(find(judge({}), 'provider')?.value).toBe('Andrews & Arnold Ltd · AS20712');
   });
 
-  it('without a VPN, an old VPN-off comparison is ignored', () => {
-    expect(find(judge({ usesVpn: false, vpnOff: 'hidden' }), 'publicIp')?.verdict).toBe('leak');
+  it('before an answer the rows read CAN\'T TELL, so they are not counted', () => {
+    for (const id of IDS) expect(find(judge({ answer: null }), id)?.verdict).toBe('unknown');
   });
 
-  it('Tor and Private Relay read OK whatever the answer', () => {
-    for (const usesVpn of [true, false]) {
-      for (const flag of [{ tor: true }, { privateRelay: true }]) {
-        const fs = judge({ usesVpn, main: who(flag) });
-        for (const id of ['publicIp', 'provider', 'location']) expect(find(fs, id)?.verdict).toBe('ok');
+  it('"that\'s my VPN" reads OK, unless the double-check saw the same address', () => {
+    for (const vpnOff of /** @type {const} */ ([null, 'hidden', 'otherFamily'])) {
+      for (const id of IDS) expect(find(judge({ answer: 'vpn', vpnOff }), id)?.verdict, `${vpnOff}`).toBe('ok');
+    }
+    for (const id of IDS) expect(find(judge({ answer: 'vpn', vpnOff: 'same' }), id)?.verdict).toBe('leak');
+  });
+
+  it('Tor and iCloud Private Relay read OK whatever the answer, even none', () => {
+    for (const over of [{ tor: true }, { privateRelay: true }]) {
+      for (const answer of /** @type {const} */ ([null, 'yes'])) {
+        const fs = judge({ main: who(over), answer });
+        for (const id of IDS) expect(find(fs, id)?.verdict).toBe('ok');
       }
     }
+    expect(find(judge({ main: who({ tor: true }) }), 'publicIp')?.value).toBe('81.2.69.••• · Tor exit');
   });
 
-  it('public IP is masked', () => {
-    const p = find(judge({}), 'publicIp');
-    expect(p?.value).toContain('81.2.69.•••');
-    expect(p?.value).not.toContain('142');
+  it('masks the address unless reveal is pressed', () => {
+    expect(find(judge({}), 'publicIp')?.value).toBe('81.2.69.•••');
+    expect(find(judge({ reveal: true }), 'publicIp')?.value).toBe('81.2.69.142');
   });
 
-  it('reveal shows the full addresses', () => {
-    const fs = judge({ ice: ice({ v4: ['81.2.69.142'] }), reveal: true });
-    expect(find(fs, 'publicIp')?.value).toContain('81.2.69.142');
-    expect(find(fs, 'vpn4')?.value).toContain('81.2.69.142');
-  });
-
-  it('local IP: OK when hidden behind .local names, none, or WebRTC off; LEAK when a real address shows', () => {
-    expect(find(judge({ ice: ice({ local: ['a1b2.local'] }) }), 'webrtcLocal')).toMatchObject({ verdict: 'ok', value: 'hidden behind a .local name' });
-    expect(find(judge({ ice: ice({ local: [] }) }), 'webrtcLocal')?.verdict).toBe('ok');
-    expect(find(judge({ ice: null }), 'webrtcLocal')).toMatchObject({ verdict: 'ok', value: 'WebRTC off' });
-    const shown = find(judge({ ice: ice({ local: ['a1b2.local', '192.168.1.23'] }) }), 'webrtcLocal');
-    expect(shown).toMatchObject({ verdict: 'leak', value: 'shown: 192.168.1.23' });
-  });
-
-  it('local IP is judged even when the server did not answer', () => {
-    const fs = judge({ main: null, v4: null, v6: null, ice: ice({ local: ['10.0.0.5'] }) });
-    expect(fs.map((f) => f.id)).toEqual(['publicIp', 'webrtcLocal']);
-    expect(find(fs, 'webrtcLocal')?.verdict).toBe('leak');
-  });
-
-  it('no connection text mentions the removed time-zone test, in any language', async () => {
-    for (const [lang, word] of [['en', /time zone/i], ['fr', /fuseau/i], ['es', /zona horaria/i]]) {
-      const strings = (await import(`../../public/js/i18n/${lang}.js`)).default;
-      for (const key of ['finding.publicIp.fix', 'finding.provider.why', 'finding.provider.fix', 'finding.location.why', 'finding.location.fix']) {
-        expect(strings[key], `${lang} ${key}`).not.toMatch(word);
-      }
-    }
-  });
-
-  it('vpn: LEAK when WebRTC shows another address of the same family', () => {
-    const fs = judge({ v4: who({ ip: '198.51.100.7' }), ice: ice({ v4: ['203.0.113.42'], v6: [] }) });
-    expect(find(fs, 'vpn4')?.verdict).toBe('leak');
-    expect(find(fs, 'vpn4')?.value).toContain('203.0.113.•••');
-  });
-
-  it('vpn: LEAK when one interface matches and another shows a different address', () => {
-    const fs = judge({ ice: ice({ v4: ['81.2.69.142', '203.0.113.42'], v6: [] }) });
-    expect(find(fs, 'vpn4')?.verdict).toBe('leak');
-    expect(find(fs, 'vpn4')?.value).toContain('203.0.113.•••');
-  });
-
-  it('vpn: the same address in WebRTC follows the VPN-off comparison: CAN\'T TELL, then OK or LEAK', () => {
-    const same = ice({ v4: ['81.2.69.142'], v6: ['2001:480:10::1'] });
-    for (const [vpnOff, verdict] of /** @type {const} */ ([[null, 'unknown'], ['otherFamily', 'unknown'], ['hidden', 'ok'], ['same', 'leak']])) {
-      const fs = judge({ ice: same, vpnOff });
-      expect(find(fs, 'vpn4')?.verdict, String(vpnOff)).toBe(verdict);
-      expect(find(fs, 'vpn6')?.verdict, String(vpnOff)).toBe(verdict);
-    }
-    expect(find(judge({ ice: same }), 'vpn4')?.value).toBe('WebRTC shows the same address, 81.2.69.•••');
-  });
-
-  it('vpn: the same address on Tor or Private Relay is OK without a comparison', () => {
-    const same = ice({ v4: ['81.2.69.142'] });
-    expect(find(judge({ v4: who({ tor: true }), ice: same }), 'vpn4')?.verdict).toBe('ok');
-    expect(find(judge({ v4: who({ privateRelay: true }), ice: same }), 'vpn4')?.verdict).toBe('ok');
-  });
-
-  it('vpn: another address in WebRTC is LEAK whatever the comparison says', () => {
-    expect(find(judge({ ice: ice({ v4: ['203.0.113.42'] }), vpnOff: 'hidden' }), 'vpn4')?.verdict).toBe('leak');
-  });
-
-  it('vpn: IPv6 written differently is still the same address', () => {
-    const fs = judge({ vpnOff: 'hidden', v6: who({ ip: '2001:db8::5', family: 6 }), ice: ice({ v4: [], v6: ['2001:0DB8:0:0::5'] }) });
-    expect(find(fs, 'vpn6')?.verdict).toBe('ok');
-  });
-
-  it('vpn: "no leak observable" when no srflx came back, or WebRTC is missing', () => {
-    for (const i of [ice(), null]) {
-      const fs = judge({ ice: i });
-      for (const id of ['vpn4', 'vpn6']) {
-        expect(find(fs, id)).toMatchObject({ verdict: 'unknown', value: 'no leak observable' });
-      }
-    }
-  });
-
-  it('vpn: a family whose lookup failed is left out', () => {
-    expect(find(judge({ v6: null }), 'vpn6')).toBeUndefined();
-    expect(find(judge({ v6: null }), 'vpn4')).toBeDefined();
-    expect(find(judge({ v4: null, ice: ice({ v4: ['203.0.113.42'], v6: [] }) }), 'vpn4')).toBeUndefined();
-    expect(find(judge({ v6: 'unavailable' }), 'vpn6')).toBeUndefined();
-  });
-
-  it('vpn6: LEAK when the IPv6 address is on another network than the IPv4 one (IPv4-only VPN)', () => {
-    const fs = judge({ vpnOff: 'hidden', v6: who({ ...V6, asn: 668 }), ice: ice({ v4: ['81.2.69.142'], v6: ['2001:480:10::1'] }) });
-    expect(find(fs, 'vpn6')).toMatchObject({ verdict: 'leak', value: 'IPv6 from a different network than IPv4 (AS668 vs AS20712)' });
-    expect(find(fs, 'vpn4')?.verdict).toBe('ok');
-    // Without WebRTC the network rule still applies.
-    expect(find(judge({ v6: who({ ...V6, asn: 668 }), ice: null }), 'vpn6')?.verdict).toBe('leak');
-  });
-
-  it('vpn6: OK when both lookups share a network and WebRTC matches', () => {
-    expect(find(judge({ vpnOff: 'hidden', ice: ice({ v4: [], v6: ['2001:480:10::1'] }) }), 'vpn6')?.verdict).toBe('ok');
-  });
-
-  it('vpn6: the network rule skips Tor, Private Relay and unknown networks', () => {
-    const other = who({ ...V6, asn: 668 });
-    const i6 = ice({ v6: ['2001:480:10::1'] });
-    expect(find(judge({ v6: { ...other, tor: true }, ice: i6 }), 'vpn6')?.verdict).toBe('ok');
-    expect(find(judge({ vpnOff: 'hidden', v4: who({ tor: true }), v6: other, ice: i6 }), 'vpn6')?.verdict).toBe('ok');
-    expect(find(judge({ vpnOff: 'hidden', v4: who({ privateRelay: true }), v6: other, ice: i6 }), 'vpn6')?.verdict).toBe('ok');
-    expect(find(judge({ vpnOff: 'hidden', v6: { ...other, asn: null }, ice: i6 }), 'vpn6')?.verdict).toBe('ok');
-    expect(find(judge({ vpnOff: 'hidden', v4: null, v6: other, ice: i6 }), 'vpn6')?.verdict).toBe('ok');
-    expect(find(judge({ v6: null }), 'vpn6')).toBeUndefined();
-  });
-
-  it('the vpn6 panel explains IPv4-only VPNs and the network comparison', () => {
-    expect(t('finding.vpn6.why')).toMatch(/only carry IPv4.*provider.*compares the networks/s);
-  });
-
-  it('"busy" gives one CAN\'T TELL finding saying the server is busy', () => {
-    const fs = judge({ main: 'busy', v4: 'busy', v6: null });
-    expect(fs.map((f) => f.id)).toEqual(['publicIp', 'webrtcLocal']);
-    expect(fs[0]).toMatchObject({ id: 'publicIp', verdict: 'unknown', value: "leakcheck's server is busy, try again in a minute" });
-  });
-
-  it('null fields read "unknown", never null or undefined', () => {
-    const blank = who({ ip: '198.51.100.7', country: null, city: null, asn: null, asOrg: null });
-    const fs = judge({ main: blank, v4: blank });
-    for (const f of fs) expect(f.value).not.toMatch(/null|undefined/);
-    expect(find(fs, 'provider')?.value).toBe('unknown');
-    expect(find(fs, 'location')).toMatchObject({ value: 'unknown', verdict: 'unknown' });
-    expect(find(judge({ main: who({ city: null }) }), 'location')?.value).toBe('GB');
-    expect(find(judge({ main: who({ asOrg: null }) }), 'provider')?.value).toBe('AS20712');
-  });
-
-  it('"unavailable" gives one CAN\'T TELL finding saying the lookup is unavailable', () => {
-    const fs = judge({ main: 'unavailable', v4: 'unavailable', v6: 'unavailable' });
-    expect(fs.map((f) => f.id)).toEqual(['publicIp', 'webrtcLocal']);
-    expect(fs[0]).toMatchObject({ id: 'publicIp', verdict: 'unknown' });
-    expect(fs[0].value).toContain('lookup unavailable');
-  });
-
-  it('no answer at all gives one CAN\'T TELL finding', () => {
-    const fs = judge({ main: null, v4: null, v6: null });
-    expect(fs.map((f) => f.id)).toEqual(['publicIp', 'webrtcLocal']);
-    expect(fs[0]).toMatchObject({ id: 'publicIp', verdict: 'unknown', value: t('finding.publicIp.failed') });
+  it('says why when there is no address', () => {
+    expect(judge({ main: 'busy', v4: null, v6: null })).toEqual([{ id: 'publicIp', verdict: 'unknown', value: t('finding.publicIp.busy') }]);
+    expect(judge({ main: 'unavailable', v4: null, v6: null })[0].value).toBe(t('finding.publicIp.unavailable'));
+    expect(judge({ main: null, v4: null, v6: null })[0].value).toBe(t('finding.publicIp.failed'));
   });
 
   it('falls back to a family lookup when the main one failed', () => {
     const fs = judge({ main: null, v4: null });
     expect(find(fs, 'publicIp')?.value).toContain('2001:480:10:0:•••');
     expect(find(fs, 'location')?.value).toBe('San Diego, US');
+  });
+});
+
+describe('describeConnection', () => {
+  it('names the kind of address', () => {
+    expect(describeConnection(who(), null, null).kind).toBe('public');
+    expect(describeConnection(who({ tor: true }), null, null).kind).toBe('tor');
+    expect(describeConnection(who({ privateRelay: true }), null, null).kind).toBe('relay');
+    expect(describeConnection(who({ ip: '127.0.0.1' }), null, null).kind).toBe('local');
+    expect(describeConnection('busy', null, null)).toEqual({ kind: 'busy', who: null });
+  });
+});
+
+describe('providerName and placeName', () => {
+  it('prefer the name, then the number', () => {
+    expect(providerName(who())).toBe('Andrews & Arnold Ltd');
+    expect(providerName(who({ asOrg: null }))).toBe('AS20712');
+    expect(providerName(who({ asOrg: null, asn: null }))).toBeNull();
+  });
+  it('write the country in the page language', () => {
+    expect(placeName(who(), 'en')).toBe('London, United Kingdom');
+    expect(placeName(who(), 'fr')).toBe('London, Royaume-Uni');
+    expect(placeName(who({ city: null }), 'es')).toBe('Reino Unido');
+    expect(placeName(who({ city: null, country: null }), 'en')).toBeNull();
+  });
+});
+
+describe('vpnChecks', () => {
+  /** @param {ReturnType<typeof checks>} rows @param {string} id */
+  const row = (rows, id) => /** @type {import('../../public/js/connection.js').VpnCheck} */ (rows.find((r) => r.id === id));
+
+  it('always gives exactly three rows, in order', () => {
+    expect(checks({}).map((r) => r.id)).toEqual(['vpnHide', 'vpnWebrtc', 'vpnIpv6']);
+  });
+
+  it('row 1 takes the visitor\'s word unless the double-check saw the same address', () => {
+    expect(row(checks({}), 'vpnHide')).toMatchObject({ verdict: 'ok', answer: 'yes: sites see Andrews & Arnold Ltd in London, United Kingdom, not you', fix: null });
+    expect(row(checks({ vpnOff: 'hidden' }), 'vpnHide').verdict).toBe('ok');
+    const same = row(checks({ vpnOff: 'same' }), 'vpnHide');
+    expect(same.verdict).toBe('leak');
+    expect(same.fix).toMatch(/^basic fix:/);
+  });
+
+  it('row 2 is LEAK when WebRTC shows another address than the site sees, in either family', () => {
+    const v4 = row(checks({ ice: ice({ v4: ['198.51.100.7'] }) }), 'vpnWebrtc');
+    expect(v4.verdict).toBe('leak');
+    expect(v4.answer).toBe('yes: they show another address, 198.51.100.•••');
+    expect(v4.fix).toMatch(/own app/);
+    expect(row(checks({ ice: ice({ v6: ['2001:db8::9'] }) }), 'vpnWebrtc').verdict).toBe('leak');
+    // One matching interface does not hide another that differs.
+    expect(row(checks({ ice: ice({ v4: ['81.2.69.142', '198.51.100.7'] }) }), 'vpnWebrtc').verdict).toBe('leak');
+  });
+
+  it('row 2 is OK when every WebRTC address matches, or WebRTC is off', () => {
+    expect(row(checks({ ice: ice({ v4: ['81.2.69.142'], v6: ['2001:0480:0010::1'] }) }), 'vpnWebrtc').verdict).toBe('ok');
+    expect(row(checks({ ice: null }), 'vpnWebrtc')).toMatchObject({ verdict: 'ok', answer: t('vpn.webrtc.off') });
+  });
+
+  it('row 2 says CAN\'T TELL only when nothing could be compared, never because of the VPN', () => {
+    expect(row(checks({ ice: ice() }), 'vpnWebrtc').verdict).toBe('unknown');
+    // A family whose lookup is local (testing on this machine) is not compared.
+    expect(row(checks({ v4: who({ ip: '127.0.0.1' }), v6: null, ice: ice({ v4: ['81.2.69.142'] }) }), 'vpnWebrtc').verdict).toBe('unknown');
+  });
+
+  it('row 3 is LEAK when IPv6 goes through another network than IPv4, and names it', () => {
+    const r = row(checks({ main: who({ asn: 9009, asOrg: 'M247' }), v4: who({ asn: 9009, asOrg: 'M247' }), v6: { ...V6, asn: 12322, asOrg: 'Free SAS' } }), 'vpnIpv6');
+    expect(r).toMatchObject({ verdict: 'leak', answer: 'no: newer-style addresses (IPv6) go around it, through Free SAS' });
+    expect(r.fix).toMatch(/IPv6 leak protection/);
+    // When the site saw IPv6 (the tunnel), it is IPv4 that goes around.
+    const v6main = row(checks({ main: { ...V6, asn: 9009 }, v4: who({ asn: 12322, asOrg: 'Free SAS' }), v6: { ...V6, asn: 9009 } }), 'vpnIpv6');
+    expect(v6main.answer).toBe('no: older-style addresses (IPv4) go around it, through Free SAS');
+  });
+
+  it('row 3 is OK with no IPv6, IPv6 only, or one network; CAN\'T TELL when a network is unknown', () => {
+    expect(row(checks({ v6: null }), 'vpnIpv6')).toMatchObject({ verdict: 'ok', answer: t('vpn.ipv6.none') });
+    expect(row(checks({ v4: null }), 'vpnIpv6')).toMatchObject({ verdict: 'ok', answer: t('vpn.ipv6.only') });
+    expect(row(checks({}), 'vpnIpv6')).toMatchObject({ verdict: 'ok', answer: t('vpn.ipv6.same') });
+    expect(row(checks({ v6: { ...V6, asn: null } }), 'vpnIpv6').verdict).toBe('unknown');
+    expect(row(checks({ v6: 'busy' }), 'vpnIpv6').verdict).toBe('unknown');
+  });
+});
+
+describe('judgeWebrtcLocal', () => {
+  it('a .local name hides the address: OK', () => {
+    expect(judgeWebrtcLocal(ice(), t)).toEqual({ id: 'webrtcLocal', verdict: 'ok', value: t('finding.webrtcLocal.hidden') });
+  });
+  it('a real local address leaks', () => {
+    expect(judgeWebrtcLocal(ice({ local: ['192.168.1.20', 'x.local'] }), t)).toEqual({ id: 'webrtcLocal', verdict: 'leak', value: 'shown: 192.168.1.20' });
+  });
+  it('WebRTC off: OK', () => {
+    expect(judgeWebrtcLocal(null, t)).toMatchObject({ verdict: 'ok', value: t('finding.webrtcLocal.off') });
   });
 });
 
@@ -244,22 +194,16 @@ describe('isLocalIp', () => {
 
 describe('judgeConnection on this machine or a local network', () => {
   const loop = who({ ip: '::1', family: 6, country: null, city: null, asn: null, asOrg: null });
-  it('shows one CAN\'T TELL row explaining the address, plus the local IP, whatever the VPN answer', () => {
-    for (const usesVpn of [true, false]) {
-      const fs = judge({ main: loop, v4: who({ ip: '127.0.0.1', country: null, city: null, asn: null, asOrg: null }), v6: loop, usesVpn, reveal: true });
-      expect(fs.map((f) => f.id)).toEqual(['publicIp', 'webrtcLocal']);
+  it('shows one CAN\'T TELL row explaining the address, whatever the answer', () => {
+    for (const answer of /** @type {const} */ (['yes', 'vpn', null])) {
+      const fs = judge({ main: loop, v4: who({ ip: '127.0.0.1', country: null, city: null, asn: null, asOrg: null }), v6: loop, answer, reveal: true });
+      expect(fs.map((f) => f.id)).toEqual(['publicIp']);
       expect(fs[0].verdict).toBe('unknown');
-      expect(fs[0].value).toBe("::1 · this machine or your local network: leakcheck can't see your public address from here");
+      expect(fs[0].value).toBe("::1 · this machine or your local network: ombre can't see your public address from here");
     }
   });
   it('a public family lookup wins over a local main lookup', () => {
-    const fs = judge({ main: loop, v4: who() });
-    expect(find(fs, 'publicIp')?.value).toContain('81.2.69.•••');
-  });
-  it('a family whose lookup is local gets no VPN row', () => {
-    const fs = judge({ v6: loop, ice: ice({ v6: ['2001:db8::5'] }) });
-    expect(find(fs, 'vpn6')).toBeUndefined();
-    expect(find(fs, 'vpn4')).toBeDefined();
+    expect(find(judge({ main: loop, v4: who() }), 'publicIp')?.value).toContain('81.2.69.•••');
   });
   it('masks the address unless reveal is pressed', () => {
     expect(judge({ main: who({ ip: '192.168.1.20' }), v4: null, v6: null })[0].value).toContain('192.168.1.•••');
@@ -277,7 +221,7 @@ describe('compareVpnOff', () => {
     expect(compareVpnOff(a, { ip: '2001:db8::5', family: 6 })).toBe('otherFamily');
   });
   it('says so in plain words', () => {
-    expect(t('connection.vpnOff.otherFamily')).toBe("can't compare (different address type)");
+    expect(t('vpn.cmp.otherFamily')).toBe("can't compare: the two addresses are of different types");
   });
 });
 

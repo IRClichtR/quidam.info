@@ -14,5 +14,10 @@ describe('securityHeaders', () => {
     expect(h['cross-origin-opener-policy']).toBe('same-origin');
     expect(h['cross-origin-resource-policy']).toBe('same-origin');
     expect(h['permissions-policy']).toBe('camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+    expect(h['strict-transport-security']).toBeUndefined();
+  });
+  it('adds HSTS only when the site is served over HTTPS', () => {
+    const h = securityHeaders(loadConfig({ SITE_ORIGIN: 'https://leak.example' }));
+    expect(h['strict-transport-security']).toBe('max-age=31536000; includeSubDomains');
   });
 });

@@ -67,8 +67,21 @@ it('applies the dev override per family', () => {
   expect(clientIp(fakeReq('::ffff:127.0.0.1'), devCfg)).toBe('81.2.69.142');
   expect(clientIp(fakeReq('::1'), devCfg)).toBe('2001:480:10::1');
 });
-it('never reads X-Forwarded-For', () => {
+it('ignores X-Forwarded-For from a socket that is not a trusted proxy', () => {
   expect(clientIp(fakeReq('5.6.7.8', { 'x-forwarded-for': '1.2.3.4' }), cfg)).toBe('5.6.7.8');
+  const proxied = loadConfig({ TRUST_PROXY: '127.0.0.1' });
+  expect(clientIp(fakeReq('5.6.7.8', { 'x-forwarded-for': '1.2.3.4' }), proxied)).toBe('5.6.7.8');
+});
+it('takes the right-most X-Forwarded-For entry from a trusted proxy', () => {
+  const proxied = loadConfig({ TRUST_PROXY: '127.0.0.1,::1' });
+  expect(clientIp(fakeReq('127.0.0.1', { 'x-forwarded-for': '9.9.9.9, 81.2.69.142' }), proxied)).toBe('81.2.69.142');
+  expect(clientIp(fakeReq('::ffff:127.0.0.1', { 'x-forwarded-for': '::ffff:81.2.69.142' }), proxied)).toBe('81.2.69.142');
+  expect(clientIp(fakeReq('::1', { 'x-forwarded-for': '2001:db8::1' }), proxied)).toBe('2001:db8::1');
+});
+it('falls back to the socket address when a trusted proxy sends junk', () => {
+  const proxied = loadConfig({ TRUST_PROXY: '127.0.0.1' });
+  expect(clientIp(fakeReq('127.0.0.1', { 'x-forwarded-for': '1.2.3.4, not-an-ip' }), proxied)).toBe('127.0.0.1');
+  expect(clientIp(fakeReq('127.0.0.1'), proxied)).toBe('127.0.0.1');
 });
 it('200 with JSON, no-store and CORS for the site origin only', () => {
   const res = fakeRes();

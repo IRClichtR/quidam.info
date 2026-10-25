@@ -1,52 +1,68 @@
 // @ts-check
-// The page controller. It wires buttons to the other modules: scan the browser, check the
-// connection, probe the local network, then show the fix plan and rescan.
-// Everything is click-gated and kept in memory (state.js, plus a Set of ticked fixes):
+// The page controller. It wires buttons to the other modules: scan the browser, show what sites
+// see about the connection (and check the VPN), probe the local network, then group what leaks
+// into problems with a basic fix each.
+// Everything is click-gated and kept in memory (state.js, plus the ticked and opened fix cards):
 // there is no storage, no cookie, no analytics, so closing the tab erases it all.
-import { loadStrings, t, tList } from './i18n.js';
+import { loadStrings, t, tList, tPlural, has } from './i18n.js';
 import { collectBrowser, judgeBrowser } from './browser.js';
-import { renderFindings, renderSummary, announce, el } from './render.js';
+import { renderFindings, renderSummary, announce, el, icon, tag } from './render.js';
 import { state } from './state.js';
-import { fetchWhoami, gatherIce, judgeConnection, compareVpnOff, stunUrls, primaryLookup, isLocalIp } from './connection.js';
+import {
+  fetchWhoami, gatherIce, judgeConnection, compareVpnOff, stunUrls, primaryLookup, describeConnection,
+  providerName, placeName, maskIp, vpnChecks, judgeWebrtcLocal,
+} from './connection.js';
 import { probeRouters, permissionState, probeTimeout, judgeLocalnet } from './localnet.js';
-import { FIXES, orderFixes, detectBrowser, buildFixCards, rescanText } from './fixes.js';
+import { detectBrowser, detectPlatform, buildProblemCard, rescanText } from './fixes.js';
+import { groupProblems } from './problems.js';
 
 const root = document.documentElement;
+const lang = root.lang;
 // Top-level await: the page text must be loaded before anything is drawn.
 // The language comes from the <html lang> of each translated page.
-await loadStrings(root.lang);
+await loadStrings(lang);
 
 // data-i18n="key" sets the text; placeholders come from the element's other data-* attributes.
-for (const el of document.querySelectorAll('[data-i18n]')) {
-  const html = /** @type {HTMLElement} */ (el);
+for (const node of document.querySelectorAll('[data-i18n]')) {
+  const html = /** @type {HTMLElement} */ (node);
   html.textContent = t(html.dataset.i18n ?? '', { ...html.dataset });
 }
 // data-i18n-attr="aria-label:key" (several pairs separated by commas) sets attributes.
-for (const el of document.querySelectorAll('[data-i18n-attr]')) {
-  for (const pair of (el.getAttribute('data-i18n-attr') ?? '').split(',')) {
+for (const node of document.querySelectorAll('[data-i18n-attr]')) {
+  for (const pair of (node.getAttribute('data-i18n-attr') ?? '').split(',')) {
     const [attr, key] = pair.split(':').map((s) => s.trim());
-    el.setAttribute(attr, t(key));
+    node.setAttribute(attr, t(key));
   }
 }
-root.dataset.i18nReady = root.lang;
+root.dataset.i18nReady = lang;
+
+/** @param {string} id */
+const byId = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
+
+/** Every section's current findings, together. */
+const allFindings = () => [...state.browser, ...state.connection, ...state.localnet];
 
 /** Leak and OK counts, formatted for the page language. @param {import('./browser.js').Finding[]} findings */
 function counts(findings) {
-  const num = new Intl.NumberFormat(root.lang);
+  const num = new Intl.NumberFormat(lang);
   const count = (/** @type {string} */ v) => num.format(findings.filter((f) => f.verdict === v).length);
   return { leak: count('leak'), ok: count('ok') };
 }
 
-/** The summary tiles count every section's findings together. */
+/** Redraw what depends on every section: the summary tiles and the fix plan. */
 function updateSummary() {
-  renderSummary(/** @type {HTMLElement} */ (document.querySelector('#results .tiles')), [...state.browser, ...state.connection, ...state.localnet], t, state.browser.length > 0);
+  const findings = allFindings();
+  renderSummary(/** @type {HTMLElement} */ (document.querySelector('#results .tiles')), findings, {
+    t, tPlural, scanned: state.browser.length > 0, problems: groupProblems(findings).length,
+  });
   // Once there are results, the 'run a scan' hint is no longer needed.
   const hint = document.querySelector('#results .hint');
-  if (hint instanceof HTMLElement) hint.hidden = true;
+  if (hint instanceof HTMLElement) hint.hidden = findings.length > 0;
+  drawFixes();
 }
 
 // ---------- browser scan ----------
-const runBtn = /** @type {HTMLButtonElement} */ (document.getElementById('run-scan'));
+const runBtn = /** @type {HTMLButtonElement} */ (byId('run-scan'));
 // Each check has a busy flag, so a double click cannot start two runs. We use aria-disabled
 // (not `disabled`) so the button stays focusable for keyboard users.
 let scanning = false;
@@ -59,7 +75,7 @@ async function runScan() {
   announce(t('scan.running'));
   try {
     // collect (read the browser), judge (decide verdicts), render (draw), then announce for screen readers.
-    const findings = judgeBrowser(await collectBrowser(), t, root.lang);
+    const findings = judgeBrowser(await collectBrowser(), t, lang);
     state.browser = findings;
     renderFindings(/** @type {HTMLUListElement} */ (document.querySelector('#browser .findings')), findings, t);
     updateSummary();
@@ -73,71 +89,181 @@ async function runScan() {
 }
 runBtn.addEventListener('click', runScan);
 
-// ---------- connection check ----------
-const connBtn = /** @type {HTMLButtonElement} */ (document.getElementById('run-connection'));
-const revealBtn = /** @type {HTMLButtonElement} */ (document.getElementById('reveal-ip'));
-const vpnOffBtn = /** @type {HTMLButtonElement} */ (document.getElementById('vpn-off'));
-const vpnOffBox = /** @type {HTMLElement} */ (document.getElementById('vpn-off-box'));
-const vpnOffResult = /** @type {HTMLElement} */ (document.getElementById('vpn-off-result'));
-const tools = /** @type {HTMLElement} */ (document.getElementById('connection-tools'));
-const connList = /** @type {HTMLUListElement} */ (document.querySelector('#connection .findings'));
-const vpnHint = /** @type {HTMLElement} */ (document.getElementById('vpn-hint'));
-const vpnRadios = /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('#connection input[name="vpn"]'));
+// ---------- connection: what sites see ----------
+const connBtn = /** @type {HTMLButtonElement} */ (byId('run-connection'));
+const revealBtn = /** @type {HTMLButtonElement} */ (byId('reveal-ip'));
+const resultCard = byId('conn-result');
+const question = byId('conn-question');
+const outcome = byId('conn-outcome');
+const choices = /** @type {HTMLButtonElement[]} */ ([...question.querySelectorAll('.choice')]);
+const vpnSection = byId('vpn-check');
+const compareBox = byId('vpn-compare');
+const vpnOffBtn = /** @type {HTMLButtonElement} */ (byId('vpn-off'));
+const vpnOffResult = byId('vpn-off-result');
+byId('vpn-steps').replaceChildren(...tList('vpn.cmp.steps').map((s) => el('li', undefined, s)));
 let checking = false;
 
-/** The visitor's answer to "are you using a VPN?": true, false, or null before they answer. */
-function usesVpn() {
-  const picked = [...vpnRadios].find((r) => r.checked);
-  return picked ? picked.value === 'yes' : null;
+const revealed = () => revealBtn.getAttribute('aria-pressed') === 'true';
+/** @param {string} ip */
+const show = (ip) => (revealed() ? ip : maskIp(ip));
+
+/** The two big lines of the result card: whose connection, and where. @param {import('./connection.js').Whoami} who @param {string} kind */
+function cardLines(who, kind) {
+  const provider = providerName(who);
+  const place = placeName(who, lang);
+  const line1 = kind === 'tor' ? t('conn.line.tor') : kind === 'relay' ? t('conn.line.relay') : kind === 'local' ? t('conn.line.local')
+    : provider ? t('conn.line.provider', { provider }) : t('conn.line.noProvider');
+  const line2 = kind === 'local' ? '' : place ? t('conn.line.place', { place }) : t('conn.line.noPlace');
+  return { line1, line2, provider: provider ?? t('finding.unknown'), place: place ?? t('finding.unknown') };
 }
 
-/** Draw the connection rows from the saved input and the current answer, masked unless reveal is pressed. */
+/**
+ * The outcome under the question: the verdict tag, what it means, and where to go next.
+ * @param {'leak'|'ok'} verdict @param {string} text @param {HTMLElement|null} next
+ */
+function outcomePanel(verdict, text, next) {
+  const panel = el('div', 'outcome-panel');
+  panel.dataset.outcome = verdict;
+  const body = el('div', 'outcome-body');
+  body.append(el('p', undefined, text));
+  if (next) body.append(next);
+  panel.append(tag(verdict, t), body);
+  return panel;
+}
+
+/** Draw the result card, the question, the outcome and step 2 from the saved lookups. */
 function drawConnection() {
   const input = state.connectionInput;
-  const vpn = usesVpn();
-  if (!input || vpn === null) return;
-  const reveal = revealBtn.getAttribute('aria-pressed') === 'true';
-  state.connection = judgeConnection({ ...input, usesVpn: vpn, vpnOff: state.vpnOff, reveal }, t);
-  renderFindings(connList, state.connection, t);
-  const who = primaryLookup(input.main, input.v4, input.v6);
-  tools.hidden = who === null;
-  // The VPN-off check is only for visitors with a VPN, and makes no sense for Tor or Private
-  // Relay, which hide the address on purpose, or for a local address (testing on this machine).
-  vpnOffBox.hidden = !vpn || who === null || who.tor || who.privateRelay || isLocalIp(who.ip);
+  if (!input) return;
+  const { kind, who } = describeConnection(input.main, input.v4, input.v6);
+  const isPublic = kind === 'public';
+  // An answer only means something for a public address we haven't recognised ourselves.
+  const answer = isPublic ? state.answer : null;
+  state.connection = judgeConnection({ ...input, answer, vpnOff: state.vpnOff, reveal: revealed() }, t);
+
+  resultCard.hidden = false;
+  const lines = byId('conn-lines');
+  const note = byId('conn-note');
+  const details = byId('conn-details');
+  if (!who) {
+    lines.replaceChildren();
+    note.textContent = t(`finding.publicIp.${kind}`);
+    note.hidden = false;
+    details.hidden = true;
+  } else {
+    const { line1, line2, provider, place } = cardLines(who, kind);
+    lines.replaceChildren(...[line1, line2].filter(Boolean).map((s) => el('span', undefined, s)));
+    note.textContent = kind === 'local' ? t('conn.local') : '';
+    note.hidden = kind !== 'local';
+    details.hidden = false;
+    byId('conn-ip').textContent = show(who.ip);
+    byId('conn-net').textContent = who.asn === null ? '' : `AS${who.asn}`;
+    byId('conn-net-row').hidden = who.asn === null;
+    byId('conn-opt-yes').textContent = t('conn.opt.yes', { provider, place });
+    byId('vpn-recap').textContent = t('vpn.recap', { line1, line2 });
+  }
+
+  question.hidden = !isPublic;
+  for (const c of choices) {
+    const on = c.dataset.answer === answer;
+    c.setAttribute('aria-checked', String(on));
+  }
+  // Roving tabindex: Tab reaches the group once, on the picked option (or the first).
+  const focusable = choices.find((c) => c.dataset.answer === answer) ?? choices[0];
+  for (const c of choices) c.tabIndex = c === focusable ? 0 : -1;
+
+  /** @type {HTMLElement|null} */
+  let panel = null;
+  if (kind === 'tor' || kind === 'relay') {
+    panel = outcomePanel('ok', t(`conn.${kind}.text`), null);
+  } else if (isPublic && (answer === 'yes' || answer === 'unsure')) {
+    const link = /** @type {HTMLAnchorElement} */ (el('a', undefined, t('conn.fixLink')));
+    link.href = document.getElementById('fix-where') ? '#fix-where' : '#fix';
+    panel = outcomePanel('leak', t(answer === 'yes' ? 'conn.yes.text' : 'conn.unsure.text'), link);
+  } else if (isPublic && answer === 'vpn') {
+    const go = /** @type {HTMLButtonElement} */ (el('button', 'btn', t('conn.vpn.run')));
+    go.type = 'button';
+    go.id = 'test-vpn';
+    go.setAttribute('aria-controls', 'vpn-check');
+    go.setAttribute('aria-expanded', String(state.vpnOpen));
+    go.addEventListener('click', () => {
+      state.vpnOpen = true;
+      drawConnection();
+      byId('vpn-title').focus();
+    });
+    panel = outcomePanel('ok', t('conn.vpn.text'), go);
+  }
+  outcome.replaceChildren(...(panel ? [panel] : []));
+  drawVpnCheck(isPublic && answer === 'vpn' && state.vpnOpen);
 }
 
-// The check button works only once the visitor has answered, because the answer decides the verdicts.
-// Changing the answer later re-judges the rows on the spot, without asking the server again.
-for (const radio of vpnRadios) {
-  radio.addEventListener('change', () => {
-    // The hint is gone, so the button stops pointing to it (screen readers read hidden text too).
-    vpnHint.hidden = true;
-    connBtn.removeAttribute('aria-describedby');
-    if (!checking) connBtn.removeAttribute('aria-disabled');
-    if (!state.connectionInput) return;
-    drawConnection();
-    updateSummary();
+/** Step 2, "your VPN, checked": three plain questions answered from the lookups. @param {boolean} open */
+function drawVpnCheck(open) {
+  vpnSection.hidden = !open;
+  const input = state.connectionInput;
+  if (!open || !input) return;
+  const rows = vpnChecks({ ...input, vpnOff: state.vpnOff, lang, reveal: revealed() }, t);
+  byId('vpn-rows').replaceChildren(...rows.map((r) => {
+    const li = el('li', 'vpn-row');
+    li.dataset.check = r.id;
+    li.dataset.verdict = r.verdict;
+    const head = el('div', 'vpn-row-head');
+    const text = el('div', 'vpn-row-text');
+    text.append(el('p', 'vpn-q', t(`vpn.${r.id}.q`)), el('p', 'vpn-a', r.answer));
+    head.append(text, tag(r.verdict, t));
+    li.append(head, el('p', 'vpn-desc', t(`vpn.${r.id}.desc`)));
+    if (r.fix) li.append(el('p', 'vpn-fix', r.fix));
+    if (r.id === 'vpnHide') {
+      const toggle = /** @type {HTMLButtonElement} */ (el('button', 'link-btn', t(compareBox.hidden ? 'vpn.dbl' : 'vpn.dblHide')));
+      toggle.type = 'button';
+      toggle.id = 'vpn-dbl';
+      toggle.setAttribute('aria-expanded', String(!compareBox.hidden));
+      toggle.setAttribute('aria-controls', 'vpn-compare');
+      toggle.addEventListener('click', () => {
+        compareBox.hidden = !compareBox.hidden;
+        toggle.setAttribute('aria-expanded', String(!compareBox.hidden));
+        toggle.textContent = t(compareBox.hidden ? 'vpn.dbl' : 'vpn.dblHide');
+      });
+      li.append(toggle);
+    }
+    return li;
+  }));
+  const n = (/** @type {string} */ v) => rows.filter((r) => r.verdict === v).length;
+  const num = new Intl.NumberFormat(lang);
+  const text = tPlural('vpn.summary', n('leak'), { ok: num.format(n('ok')) });
+  byId('vpn-summary').textContent = n('unknown') ? t('vpn.summary.unknown', { text, u: num.format(n('unknown')) }) : text;
+}
+
+/** Pick an answer to "is this you?" and re-judge, without asking the server again. @param {HTMLButtonElement} choice */
+function choose(choice) {
+  const answer = /** @type {import('./connection.js').Answer} */ (choice.dataset.answer);
+  if (answer !== 'vpn') state.vpnOpen = false;
+  state.answer = answer;
+  drawConnection();
+  updateSummary();
+}
+
+for (const c of choices) {
+  c.addEventListener('click', () => choose(c));
+  // Arrow keys move through the options and pick them, as in any radio group.
+  c.addEventListener('keydown', (e) => {
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const next = choices[(choices.indexOf(c) + step + choices.length) % choices.length];
+    choose(next);
+    next.focus();
   });
 }
 
 /** Ask our own server for the address on this origin and on the single-family origins, and run WebRTC. */
 async function runConnection() {
   if (checking) return;
-  // Not answered yet: lead the visitor to the question instead of doing nothing.
-  if (usesVpn() === null) {
-    vpnRadios[0].focus();
-    announce(t('connection.vpn.hint'));
-    return;
-  }
   checking = true;
   state.ran.connection = true;
   connBtn.setAttribute('aria-disabled', 'true');
-  // The previous VPN-off answer is kept only if this check sees the same address (see below).
-  const before = state.checked;
-  const kept = { vpnOff: state.vpnOff, text: vpnOffResult.textContent };
-  vpnOffResult.textContent = '';
-  state.vpnOff = null;
   announce(t('connection.running'));
+  const before = state.checked;
   try {
     // /api/origins gives the IPv4-only and IPv6-only hostnames and the STUN port.
     const originsRes = await fetch('/api/origins', { credentials: 'omit', cache: 'no-store' }).catch(() => null);
@@ -145,23 +271,25 @@ async function runConnection() {
     const origins = originsRes?.ok ? await originsRes.json().catch(() => null) : null;
     state.origins = origins;
     // All lookups run together. The v4/v6 lookups use single-family hostnames so we know the
-    // address for each family; WebRTC asks our STUN server which public addresses it exposes,
-    // and lists the local ones (with no origins, only the local ones: no server is asked).
+    // address for each family; WebRTC asks our STUN server which public addresses it exposes.
     const [main, v4, v6, ice] = await Promise.all([
       fetchWhoami(''),
       origins ? fetchWhoami(origins.v4) : null,
       origins ? fetchWhoami(origins.v6) : null,
-      gatherIce(origins ? stunUrls(origins) : []).catch(() => null),
+      origins ? gatherIce(stunUrls(origins)).catch(() => null) : null,
     ]);
-    // Kept so 'reveal' and a changed answer can redraw the findings without asking the network again.
+    // Kept so 'show', a changed answer and step 2 can redraw without asking the network again.
     state.connectionInput = { main, v4, v6, ice };
     const who = primaryLookup(main, v4, v6);
-    // The address of this check is what the VPN-off check compares with. If it hasn't changed
-    // since the last check (a rescan, say), the earlier VPN-off answer still holds.
     state.checked = who ? { ip: who.ip, family: who.family } : null;
-    if (before && state.checked && compareVpnOff(before, state.checked) === 'same') {
-      state.vpnOff = kept.vpnOff;
-      vpnOffResult.textContent = kept.text;
+    // A rescan from the same address keeps the answer and the double-check; a new address
+    // (the VPN went on or off) asks again.
+    if (!(before && state.checked && compareVpnOff(before, state.checked) === 'same')) {
+      state.answer = null;
+      state.vpnOff = null;
+      state.vpnOpen = false;
+      vpnOffResult.replaceChildren();
+      compareBox.hidden = true;
     }
     drawConnection();
     updateSummary();
@@ -175,19 +303,28 @@ async function runConnection() {
 }
 connBtn.addEventListener('click', runConnection);
 
-// Reveal toggles masking of the IP; judging runs again from the saved input.
+// 'show' toggles masking of the IP; judging runs again from the saved input.
 revealBtn.addEventListener('click', () => {
-  revealBtn.setAttribute('aria-pressed', String(revealBtn.getAttribute('aria-pressed') !== 'true'));
+  revealBtn.setAttribute('aria-pressed', String(!revealed()));
   drawConnection();
 });
+
+/** One side of the comparison: provider · city, and the (masked) address. @param {'with'|'without'} side @param {import('./connection.js').Whoami} who */
+function compareCard(side, who) {
+  const card = el('div', `compare-card is-${side}`);
+  const place = [providerName(who), who.city].filter(Boolean).join(' · ') || t('finding.unknown');
+  card.append(el('p', 'label', t(`vpn.cmp.${side}`)), el('p', 'compare-place', place), el('p', 'compare-ip', show(who.ip)));
+  return card;
+}
 
 let rechecking = false;
 vpnOffBtn.addEventListener('click', async () => {
   const first = state.checked;
-  if (rechecking || !first) return;
+  const input = state.connectionInput;
+  if (rechecking || !first || !input) return;
   rechecking = true;
   vpnOffBtn.setAttribute('aria-disabled', 'true');
-  vpnOffResult.textContent = '';
+  vpnOffResult.replaceChildren();
   try {
     // Compare like with like: the main lookup if it has the first address's family, else that family's origin.
     const lookups = [await fetchWhoami('')];
@@ -198,11 +335,22 @@ vpnOffBtn.addEventListener('click', async () => {
       after = primaryLookup(lookups[1], null, null);
     }
     after ??= main;
-    const failed = lookups.includes('busy') ? 'finding.publicIp.busy' : 'connection.vpnOff.failed';
-    vpnOffResult.textContent = after ? t(`connection.vpnOff.${compareVpnOff(first, after)}`) : t(failed);
-    // The comparison decides the public IP, provider, location and VPN rows, so redraw them.
-    // With no answer, the rows go back to CAN'T TELL rather than keep an older comparison.
+    // With no answer, row 1 goes back to the visitor's word rather than keep an older comparison.
     state.vpnOff = after ? compareVpnOff(first, after) : null;
+    if (!after) {
+      vpnOffResult.append(el('p', 'compare-verdict', t(lookups.includes('busy') ? 'finding.publicIp.busy' : 'vpn.cmp.failed')));
+    } else {
+      const withVpn = /** @type {import('./connection.js').Whoami} */ (primaryLookup(input.main, input.v4, input.v6));
+      const cards = el('div', 'compare-cards');
+      cards.append(compareCard('with', withVpn), compareCard('without', after));
+      const verdict = el('p', 'compare-verdict');
+      if (state.vpnOff === 'otherFamily') verdict.append(tag('unknown', t), t('vpn.cmp.otherFamily'));
+      else verdict.append(tag(state.vpnOff === 'hidden' ? 'ok' : 'leak', t), t(`vpn.cmp.${state.vpnOff}`));
+      const back = el('p', 'back-on');
+      back.setAttribute('role', 'note');
+      back.append(icon('ok', 2), t('vpn.cmp.backOn'));
+      vpnOffResult.append(cards, verdict, back);
+    }
     drawConnection();
     updateSummary();
   } finally {
@@ -212,10 +360,10 @@ vpnOffBtn.addEventListener('click', async () => {
 });
 
 // ---------- local network probe ----------
-const localBtn = /** @type {HTMLButtonElement} */ (document.getElementById('run-localnet'));
+const localBtn = /** @type {HTMLButtonElement} */ (byId('run-localnet'));
 let probing = false;
 
-/** Try the router addresses and check for the browser's permission prompt. A click during a probe is ignored. */
+/** Try the router addresses, check for the browser's permission prompt, and read the local IP WebRTC shares. */
 async function runLocalnet() {
   if (probing) return;
   probing = true;
@@ -224,10 +372,15 @@ async function runLocalnet() {
   announce(t('localnet.running'));
   try {
     // Ask the permission state first: if the browser will show a prompt, the probe waits
-    // 30 s for the visitor instead of 3 s.
+    // 30 s for the visitor instead of 3 s. WebRTC with no server asks nobody: it only lists
+    // this device's own addresses.
     const permission = await permissionState();
-    const router = await probeRouters(fetch, performance.now.bind(performance), probeTimeout(permission));
-    state.localnet = judgeLocalnet({ router, promptSupported: permission !== null }, t);
+    const [router, ice] = await Promise.all([
+      probeRouters(fetch, performance.now.bind(performance), probeTimeout(permission)),
+      gatherIce([]).catch(() => null),
+    ]);
+    const [routerRow, prompt, others] = judgeLocalnet({ router, promptSupported: permission !== null }, t);
+    state.localnet = [routerRow, prompt, judgeWebrtcLocal(ice, t), others];
     renderFindings(/** @type {HTMLUListElement} */ (document.querySelector('#localnet .findings')), state.localnet, t);
     updateSummary();
     announce(t('localnet.done', counts(state.localnet)));
@@ -241,51 +394,55 @@ async function runLocalnet() {
 localBtn.addEventListener('click', runLocalnet);
 
 // ---------- fix plan ----------
-const fixSection = /** @type {HTMLElement} */ (document.getElementById('fix'));
-const showFixesBtn = /** @type {HTMLButtonElement} */ (document.getElementById('show-fixes'));
-const fixList = /** @type {HTMLOListElement} */ (fixSection.querySelector('.fix-list'));
-const doneCount = /** @type {HTMLElement} */ (document.getElementById('fix-done'));
-const progressBar = /** @type {HTMLElement} */ (fixSection.querySelector('.progress-bar'));
-const rescanBtn = /** @type {HTMLButtonElement} */ (document.getElementById('rescan'));
-const rescanResult = /** @type {HTMLElement} */ (document.getElementById('rescan-result'));
-/** Ticked fixes, in memory only: they vanish with the tab. @type {Set<string>} */
+const fixList = /** @type {HTMLOListElement} */ (document.querySelector('#fix .fix-list'));
+const progressBar = /** @type {HTMLElement} */ (document.querySelector('#fix .progress-bar'));
+const rescanBtn = /** @type {HTMLButtonElement} */ (byId('rescan'));
+const rescanResult = byId('rescan-result');
+/** Problems ticked as done, and cards opened or closed by the visitor. In memory only. */
 const done = new Set();
-
-/** Show "N / 7 done" and one block per fix, filled when ticked. */
-function drawProgress() {
-  const num = new Intl.NumberFormat(root.lang);
-  doneCount.textContent = t('fix.progress.done', { n: num.format(done.size), total: num.format(FIXES.length) });
-  progressBar.replaceChildren(...FIXES.map((_, i) => el('span', i < done.size ? 'bar-cell is-done' : 'bar-cell')));
-}
-
-// Cards are built once; changing the threat only reorders them.
-const cards = buildFixCards({
-  t, tList, lang: root.lang,
+/** @type {Map<string, boolean>} */
+const opened = new Map();
+const ctx = {
+  t, tList, tPlural, has, lang,
   browser: detectBrowser(/** @type {{userAgent: string, brave?: unknown}} */ (navigator)),
-  onToggle: (id, on) => {
+  platform: detectPlatform(/** @type {any} */ (navigator)),
+  /** @param {string} id @param {boolean} on */
+  onDone: (id, on) => {
     if (on) done.add(id); else done.delete(id);
-    drawProgress();
+    drawFixes();
+    // The control that was pressed is gone: move focus to its counterpart on the redrawn card.
+    const card = document.getElementById(`fix-${id}`);
+    /** @type {HTMLElement|null|undefined} */ (card?.querySelector(on ? '[data-action="undo"]' : '[data-action="done"]'))?.focus();
   },
-});
+  /** @param {string} id @param {boolean} open */
+  onOpen: (id, open) => { opened.set(id, open); },
+};
 
-/** Put the cards in the order for the picked threat; moving the nodes keeps ticks and open panels. */
-function orderCards() {
-  const picked = fixSection.querySelector('input[name="threat"]:checked');
-  const threat = picked instanceof HTMLInputElement ? /** @type {import('./fixes.js').Threat} */ (picked.value) : null;
-  fixList.replaceChildren(...orderFixes(threat).map((f) => /** @type {HTMLLIElement} */ (cards.get(f.id))));
+/** The lead sentence, the progress row and one card per problem. Ticks never change the counts; a rescan does. */
+function drawFixes() {
+  const findings = allFindings();
+  const problems = groupProblems(findings);
+  byId('fix-empty').hidden = findings.length > 0;
+  byId('fix-plan').hidden = findings.length === 0;
+  const num = new Intl.NumberFormat(lang);
+  const leaks = problems.reduce((sum, p) => sum + p.leaks.length, 0);
+  byId('fix-lead').textContent = !problems.length ? t('fix.none')
+    : leaks === 1 ? t('fix.lead.single')
+      : problems.length === 1 ? t('fix.lead.oneProblem', { leaks: num.format(leaks) })
+        : t('fix.lead.many', { leaks: num.format(leaks), problems: num.format(problems.length) });
+  byId('fix-progress').hidden = !problems.length;
+  const d = problems.filter((p) => done.has(p.id)).length;
+  byId('fix-done').textContent = tPlural('fix.progress', problems.length, { d: num.format(d) });
+  progressBar.replaceChildren(...problems.map((p) => el('span', done.has(p.id) ? 'bar-cell is-done' : 'bar-cell')));
+  fixList.replaceChildren(...problems.map((p, index) => {
+    const card = buildProblemCard(p, { index, total: problems.length, done: done.has(p.id), open: opened.get(p.id) ?? index === 0 }, ctx);
+    card.id = `fix-${p.id}`;
+    return card;
+  }));
 }
-orderCards();
-drawProgress();
-for (const radio of fixSection.querySelectorAll('input[name="threat"]')) radio.addEventListener('change', orderCards);
-
-showFixesBtn.addEventListener('click', () => {
-  fixSection.hidden = false;
-  showFixesBtn.setAttribute('aria-expanded', 'true');
-  /** @type {HTMLElement} */ (document.getElementById('fix-title')).focus();
-});
 
 /** Leaks across every section's current findings. */
-const leaking = () => [...state.browser, ...state.connection, ...state.localnet].filter((f) => f.verdict === 'leak').length;
+const leaking = () => allFindings().filter((f) => f.verdict === 'leak').length;
 
 let rescanning = false;
 /** Rerun the browser scan, plus the click-gated checks the visitor already ran here, then compare leak counts. */
@@ -294,7 +451,6 @@ rescanBtn.addEventListener('click', async () => {
   rescanning = true;
   rescanBtn.setAttribute('aria-disabled', 'true');
   rescanResult.textContent = '';
-  // The VPN-off result is not cleared here: the connection rerun keeps it if the address is unchanged.
   // The 'before' count is taken now, before the rescan replaces the findings.
   const before = state.browser.length ? leaking() : null;
   try {
@@ -303,7 +459,7 @@ rescanBtn.addEventListener('click', async () => {
     // Only rerun what the visitor already chose to run. We never start a network check for them.
     if (state.ran.connection) await runConnection();
     if (state.ran.localnet) await runLocalnet();
-    const num = new Intl.NumberFormat(root.lang);
+    const num = new Intl.NumberFormat(lang);
     const text = rescanText(t, before === null ? null : num.format(before), num.format(leaking()));
     rescanResult.textContent = text;
     announce(text);

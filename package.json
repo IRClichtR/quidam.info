@@ -10,7 +10,12 @@
     "start": "node server/main.js",
     "e2e": "playwright test",
     "check": "tsc --noEmit",
-    "fonts": "node scripts/fetch-fonts.js"
+    "fonts": "node scripts/fetch-fonts.js",
+    "pages": "node scripts/sync-pages.js",
+    "legal": "node scripts/legal.js",
+    "preflight": "node scripts/preflight.js",
+    "loadtest": "node scripts/loadtest.js",
+    "deploy": "bash deploy/deploy.sh"
   },
   "repository": {
     "type": "git",

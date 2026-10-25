@@ -1,0 +1,33 @@
+{
+  "_read_me": "Copy this file to legal/owner.json (git-ignored: it never goes to GitHub) and fill in the 'you' part. Then run: npm run legal. Everything else is already filled in for the recommended setup. docs/Go_live.md, step 5, explains every field.",
+
+  "you": {
+    "fullName": "Prénom NOM",
+    "email": "contact@example.org",
+    "publishHomeAddress": false,
+    "homeAddress": "only needed if publishHomeAddress is true: number, street, postcode, city, country",
+    "phone": "only needed if publishHomeAddress is true: +33 6 12 34 56 78"
+  },
+
+  "site": {
+    "domain": "example.org",
+    "sourceCode": "https://github.com/IRClichtR/leak_checker",
+    "lastUpdated": ""
+  },
+
+  "host": {
+    "name": "Hetzner Online GmbH",
+    "address": "Industriestr. 25, 91710 Gunzenhausen, Germany",
+    "phone": "+49 9831 505-0",
+    "website": "https://www.hetzner.com",
+    "serverCountry": { "en": "Germany or Finland (European Union)", "fr": "Allemagne ou Finlande (Union européenne)", "es": "Alemania o Finlandia (Unión Europea)" }
+  },
+
+  "_host_if_you_pick_ovhcloud_instead": {
+    "name": "OVH SAS",
+    "address": "2 rue Kellermann, 59100 Roubaix, France",
+    "phone": "+33 9 72 10 10 07",
+    "website": "https://www.ovhcloud.com",
+    "serverCountry": { "en": "France (European Union)", "fr": "France (Union européenne)", "es": "Francia (Unión Europea)" }
+  }
+}

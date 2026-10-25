@@ -29,14 +29,16 @@ test('a scan fills nine rows, each with a tag', async ({ page }) => {
 test('the announcement and the tiles sum up the scan', async ({ page }) => {
   await scan(page);
   const tiles = page.locator('#results .tile');
-  await expect(tiles).toHaveCount(3);
+  await expect(tiles).toHaveCount(4);
   const leak = Number(await page.locator('#results .tile-leak span').textContent());
   const ok = Number(await page.locator('#results .tile-ok span').textContent());
   const unknown = await page.locator('#browser .tag-unknown').count();
   expect(leak + ok + unknown).toBe(9);
   expect(await page.locator('#browser .tag-leak').count()).toBe(leak);
   await expect(page.locator('#announce')).toHaveText(`Scan finished: ${leak} leaking, ${ok} protected.`);
-  await expect(tiles.nth(2)).toContainText(/blends in|fairly distinctive|likely unique/);
+  await expect(page.locator('#results [data-tile="recog"]')).toContainText(/^(hard to recognize|fairly recognizable|easy to recognize)/);
+  await expect(page.locator('#results [data-tile="recog"]')).toContainText('sites can tell your browser apart without cookies');
+  await expect(page.locator('#results')).not.toContainText(/unique|fingerprint|trackable/i);
   await expect(page.locator('#results .hint')).toBeHidden();
   await expect(page.locator('#run-scan')).toBeFocused();
   await expect(page.locator('#run-scan')).not.toHaveAttribute('aria-disabled', 'true');

@@ -24,3 +24,12 @@ it('rejects invalid ports', () => {
 it('allows port 0', () => {
   expect(loadConfig({ PORT: '0' }).port).toBe(0);
 });
+it('reads HOST and TRUST_PROXY, and rejects junk', () => {
+  expect(loadConfig({})).toMatchObject({ host: null, trustProxy: [], hsts: false });
+  expect(loadConfig({ HOST: '127.0.0.1', TRUST_PROXY: '127.0.0.1, ::1' })).toMatchObject({ host: '127.0.0.1', trustProxy: ['127.0.0.1', '::1'] });
+  expect(() => loadConfig({ TRUST_PROXY: '127.0.0.1,localhost' })).toThrow(/TRUST_PROXY/);
+  expect(() => loadConfig({ HOST: 'example.com' })).toThrow(/HOST/);
+});
+it('turns HSTS on for an https site origin', () => {
+  expect(loadConfig({ SITE_ORIGIN: 'https://leak.example' }).hsts).toBe(true);
+});

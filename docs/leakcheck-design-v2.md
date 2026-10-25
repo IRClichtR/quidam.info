@@ -274,6 +274,8 @@ FR title: "ce que les sites voient de votre connexion". ES title: "lo que los si
 
 ## 11. Implementation notes (2026-10-25)
 
+**Name.** The site is now called **ombre**. Every visible "leakcheck" in the copy above reads "ombre" in the build (French: "le serveur d’ombre").
+
 Choices made while building v2, where the boards or this document were silent or contradicted each other. Each one is easy to change.
 
 **Open questions for the designer**

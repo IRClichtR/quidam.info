@@ -1,12 +1,7 @@
 // @ts-check
-
 // Starts the HTTP server on both IPv4 and IPv6, because the checker must work for
 // visitors using either. It falls back to IPv4 only on hosts that have no IPv6.
-
-// Wraps server.listen() in a promise. Node reports a failed listen as an 'error' event,
-// so we turn that into a rejection.
-// Starts the HTTP server on both IPv4 and IPv6, because the checker must work for
-// visitors using either. It falls back to IPv4 only on hosts that have no IPv6.
+// Behind a reverse proxy, HOST pins it to one address instead (for example 127.0.0.1).
 
 // Wraps server.listen() in a promise. Node reports a failed listen as an 'error' event,
 // so we turn that into a rejection.
@@ -21,13 +16,13 @@ const listenOnce = (server, opts) => new Promise((resolve, reject) => {
 
 /**
  * Listen on IPv6 and IPv4 together; on a host without IPv6, on IPv4 only.
- // "::" is the IPv6 wildcard address. With ipv6Only false it also accepts IPv4
- // connections, so one socket serves both.
+ * With `host`, listen on that address only.
  * @param {import('node:http').Server} server
  * @param {number} port
+ * @param {string|null} [host]
  */
-// Only "no IPv6 here" errors trigger the fallback. Others (like a port already in use) are real.
-export async function listenDualStack(server, port) {
+export async function listenDualStack(server, port, host = null) {
+  if (host) return listenOnce(server, { port, host });
   try {
     // "::" is the IPv6 wildcard address. With ipv6Only false it also accepts IPv4
     // connections, so one socket serves both.

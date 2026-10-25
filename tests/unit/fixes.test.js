@@ -1,67 +1,74 @@
 // @ts-check
 import { describe, it, expect } from 'vitest';
-import { FIXES, orderFixes, detectBrowser, BROWSERS, rescanText } from '../../public/js/fixes.js';
+import { OPTIONS, optionsFor, detectBrowser, detectPlatform, BROWSERS, rescanText } from '../../public/js/fixes.js';
+import { PROBLEMS } from '../../public/js/problems.js';
 import { loadStrings, t } from '../../public/js/i18n.js';
 import en from '../../public/js/i18n/en.js';
 import fr from '../../public/js/i18n/fr.js';
 import es from '../../public/js/i18n/es.js';
 
-const ids = (/** @type {{id: string}[]} */ list) => list.map((f) => f.id);
-const DEFAULT = ['block', 'dns', 'perms', 'browser', 'ip', 'split', 'tor'];
+const UA = {
+  chrome: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+  edge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0',
+  firefox: 'Mozilla/5.0 (X11; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0',
+  safari: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15',
+  iphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1',
+  android: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36',
+  opera: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 OPR/122.0.0.0',
+};
 
-describe('FIXES', () => {
-  it('follows the spec table and the mockup minutes', () => {
-    expect(ids(FIXES)).toEqual(DEFAULT);
-    expect(FIXES.map((f) => [f.tier, f.hides, f.minutes])).toEqual([
-      ['quick', 2, 2], ['quick', 2, 1], ['quick', 1, 2],
-      ['week', 3, 30], ['week', 3, 15], ['week', 2, 10],
-      ['strong', 3, 10],
-    ]);
-  });
-
-  it('links every tag to a known finding, or to none', () => {
-    for (const fix of FIXES) {
-      for (const tag of fix.tags) {
-        if (tag.finding !== null) expect(en[`finding.${tag.finding}.label`], `${fix.id}: ${tag.finding}`).toBeTypeOf('string');
-        expect(en[`fix.tag.${tag.label}`], tag.label).toBeTypeOf('string');
+describe('product policy', () => {
+  // The design asks for 2 to 4 options, but its own browser table gives 5 on Windows and 6 on macOS.
+  // We follow the table (see the open question in docs/leakcheck-design-v2.md).
+  it('every fix with products offers at least 2 options on every platform, in alphabetical order', () => {
+    for (const id of /** @type {const} */ (['browser', 'where', 'webrtc'])) {
+      for (const platform of /** @type {const} */ (['windows', 'mac', 'linux', 'ios', 'android', 'other'])) {
+        const { shown } = optionsFor(id, platform, 'chrome');
+        const names = shown.map((o) => o.name);
+        expect(names.length, `${id} ${platform}`).toBeGreaterThanOrEqual(2);
+        expect(names, `${id} ${platform}`).toEqual([...names].sort((a, b) => a.localeCompare(b, 'en')));
       }
     }
-    const unlinked = FIXES.flatMap((f) => f.tags).filter((t) => t.finding === null).map((t) => t.label);
-    expect(new Set(unlinked)).toEqual(new Set(['trackers', 'dns', 'cookies', 'profileLinking']));
   });
 
-  it('has a title, reason, trade-off and steps for every browser', () => {
-    for (const fix of FIXES) {
-      for (const part of ['title', 'why', 'tradeoff']) expect(en[`fix.${fix.id}.${part}`]).toBeTypeOf('string');
-      for (const b of BROWSERS) {
-        const steps = en[`fix.${fix.id}.steps.${b}`];
-        expect(Array.isArray(steps), `${fix.id}/${b}`).toBe(true);
-        expect(steps.length).toBeGreaterThan(0);
-      }
+  it('on Linux, hides DuckDuckGo and Safari and names them', () => {
+    const { shown, hidden, where } = optionsFor('browser', 'linux', 'firefox');
+    expect(shown.map((o) => o.name)).toEqual(['Brave', 'Firefox', 'Mullvad Browser', 'Tor Browser']);
+    expect(hidden).toEqual(['DuckDuckGo', 'Safari']);
+    expect(where).toBe('platform');
+  });
+
+  it('never lists Opera, and never names a company left out of the VPN list', () => {
+    const all = JSON.stringify([OPTIONS, en, fr, es]);
+    expect(all).not.toMatch(/\bOpera\b|nord ?vpn|expressvpn|surfshark|cyberghost|private internet access|hotspot shield/i);
+  });
+
+  it('every option has a note in every language', () => {
+    for (const strings of [en, fr, es]) {
+      for (const o of Object.values(OPTIONS).flat()) expect(strings[`fix.opt.${o.note}`], o.note).toBeTypeOf('string');
     }
+  });
+
+  it('extensions are hidden in Safari, and the note names the browser', () => {
+    expect(optionsFor('gpc', 'mac', 'safari')).toMatchObject({ shown: [], hidden: ['DuckDuckGo Privacy Essentials', 'Privacy Badger'], where: 'browser' });
+    expect(optionsFor('gpc', 'windows', 'chrome').shown.length).toBe(2);
   });
 });
 
-describe('orderFixes', () => {
-  it('promotes the fixes matching the threat, then keeps the default order', () => {
-    expect(ids(orderFixes('targeted')).slice(0, 2)).toEqual(['tor', 'ip']);
-    expect(ids(orderFixes('ads')).slice(0, 2)).toEqual(['block', 'browser']);
-    expect(ids(orderFixes('network'))).toEqual(['dns', 'ip', 'block', 'perms', 'browser', 'split', 'tor']);
-    expect(ids(orderFixes('targeted'))).toEqual(['tor', 'ip', 'block', 'dns', 'perms', 'browser', 'split']);
-  });
-  it('uses the default order without a threat', () => {
-    expect(ids(orderFixes(null))).toEqual(DEFAULT);
+describe('every problem has its card text in every language', () => {
+  it('title, description, fix, effort, steps and trade-off', () => {
+    for (const strings of [en, fr, es]) {
+      for (const { id } of PROBLEMS) {
+        for (const part of ['title', 'desc', 'fix', 'fixDesc', 'effort', 'trade']) expect(strings[`fix.${id}.${part}`], `${id}.${part}`).toBeTypeOf('string');
+        expect(Array.isArray(strings[`fix.${id}.steps`]), `${id}.steps`).toBe(true);
+      }
+      expect(strings['fix.browser.coverage']).toBeTypeOf('string');
+      expect(strings['fix.browser.tip']).toBeTypeOf('string');
+    }
   });
 });
 
 describe('detectBrowser', () => {
-  const UA = {
-    chrome: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
-    edge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0',
-    firefox: 'Mozilla/5.0 (X11; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0',
-    safari: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15',
-    opera: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 OPR/122.0.0.0',
-  };
   it('reads one real user agent per browser', () => {
     expect(detectBrowser({ userAgent: UA.chrome })).toBe('chrome');
     expect(detectBrowser({ userAgent: UA.edge })).toBe('edge');
@@ -70,19 +77,25 @@ describe('detectBrowser', () => {
     expect(detectBrowser({ userAgent: UA.chrome.replace('Chrome/', 'HeadlessChrome/') })).toBe('chrome');
     expect(detectBrowser({ userAgent: UA.opera })).toBe('other');
     expect(detectBrowser({ userAgent: '' })).toBe('other');
+    expect(BROWSERS).toContain('other');
   });
   it('detects Brave from navigator.brave, since it sends a Chrome user agent', () => {
     expect(detectBrowser({ userAgent: UA.chrome, brave: { isBrave: () => Promise.resolve(true) } })).toBe('brave');
   });
 });
 
-describe('the Hide your IP card', () => {
-  it('VPN card names no providers', () => {
-    for (const [lang, strings] of Object.entries({ en, fr, es })) {
-      const keys = Object.keys(strings).filter((k) => k.startsWith('fix.ip.'));
-      expect(keys.length, lang).toBeGreaterThan(0);
-      for (const k of keys) expect(JSON.stringify(strings[k]), `${lang} ${k}`).not.toMatch(/mullvad|proton|nord|express|ivpn|nym/i);
-    }
+describe('detectPlatform', () => {
+  it('prefers navigator.userAgentData, then the user agent', () => {
+    expect(detectPlatform({ userAgent: UA.chrome, userAgentData: { platform: 'Linux' } })).toBe('linux');
+    expect(detectPlatform({ userAgent: UA.edge })).toBe('windows');
+    expect(detectPlatform({ userAgent: UA.firefox })).toBe('linux');
+    expect(detectPlatform({ userAgent: UA.safari })).toBe('mac');
+    expect(detectPlatform({ userAgent: UA.iphone })).toBe('ios');
+    expect(detectPlatform({ userAgent: UA.android })).toBe('android');
+    expect(detectPlatform({ userAgent: '' })).toBe('other');
+  });
+  it('an iPad asking for the desktop page says Macintosh but has a touch screen', () => {
+    expect(detectPlatform({ userAgent: UA.safari, maxTouchPoints: 5 })).toBe('ios');
   });
 });
 

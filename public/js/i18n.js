@@ -12,6 +12,8 @@ const DEV = typeof location === 'undefined' || /^(localhost|127\.0\.0\.1|\[::1\]
 
 /** @type {Strings} */
 let strings = {};
+/** The loaded language, for plural rules and number formats. */
+let current = 'en';
 
 /**
  * Load one language's strings; unknown languages get English.
@@ -22,6 +24,7 @@ export async function loadStrings(lang) {
   const code = LANGS.includes(/** @type {any} */ (lang)) ? lang : 'en';
   // Dynamic import: only the visitor's language file is downloaded.
   strings = (await import(`./i18n/${code}.js`)).default;
+  current = code;
   return strings;
 }
 
@@ -40,6 +43,27 @@ export function t(key, vars = {}) {
   }
   // Replace each `{name}` with its value. Unknown placeholders are left as written.
   return s.replace(/\{(\w+)\}/g, (m, name) => (vars[name] === undefined ? m : String(vars[name])));
+}
+
+/** Whether the loaded language has `key` (for optional parts, such as a tip or per-browser steps). @param {string} key */
+export function has(key) {
+  return key in strings;
+}
+
+// Counts need the right word form: "1 leak" but "2 leaks", and French says "0 fuite" where
+// English says "0 leaks". Intl.PluralRules knows each language's rule; the string file has one
+// variant per form, `key.one` and `key.other`. Forms a language file lacks (such as 'many') use 'other'.
+/**
+ * The plural form of `key` for `n`, with `{n}` (formatted for the language) and `vars` filled in.
+ * @param {string} key
+ * @param {number} n
+ * @param {Record<string, string|number|undefined>} [vars]
+ * @returns {string}
+ */
+export function tPlural(key, n, vars = {}) {
+  const form = new Intl.PluralRules(current).select(n);
+  const full = typeof strings[`${key}.${form}`] === 'string' ? `${key}.${form}` : `${key}.other`;
+  return t(full, { n: new Intl.NumberFormat(current).format(n), ...vars });
 }
 
 /**

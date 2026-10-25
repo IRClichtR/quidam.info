@@ -27,7 +27,7 @@ async function open(page) {
   await page.locator('html[data-i18n-ready="en"]').waitFor();
 }
 
-test('nothing is requested before the click, then three rows appear', async ({ page }) => {
+test('nothing is requested before the click, then four rows appear, the local IP included', async ({ page }) => {
   /** @type {string[]} */
   const requested = [];
   await stubRouters(page, '192.168.1.1', requested);
@@ -39,7 +39,7 @@ test('nothing is requested before the click, then three rows appear', async ({ p
 
   await page.getByRole('button', { name: 'PROBE MY NETWORK' }).click();
   const rows = page.locator('#localnet .findings > li');
-  await expect(rows).toHaveCount(3);
+  await expect(rows).toHaveCount(4);
   await expect(page.locator('#localnet [data-finding="router"]')).toContainText('answered at 192.168.1.1');
   await expect(page.locator('#localnet [data-finding="router"]')).toHaveAttribute('data-verdict', 'leak');
   await expect(page.locator('#localnet [data-finding="otherDevices"]')).toContainText('not visible from a web page');
@@ -52,5 +52,5 @@ test('refused requests read as OK', async ({ page }) => {
   await open(page);
   await page.getByRole('button', { name: 'PROBE MY NETWORK' }).click();
   await expect(page.locator('#localnet [data-finding="router"]')).toHaveAttribute('data-verdict', 'ok');
-  await expect(page.locator('#localnet .findings > li')).toHaveCount(3);
+  await expect(page.locator('#localnet .findings > li')).toHaveCount(4);
 });

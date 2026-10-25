@@ -9,7 +9,8 @@ export default defineConfig({
     { name: 'webkit', use: { browserName: 'webkit' } },
   ],
   webServer: {
-    command: 'npm start',
+    // The legal pages are generated (with placeholders when legal/owner.json is missing), then the server starts.
+    command: 'node scripts/legal.js && npm start',
     url: 'http://localhost:8080',
     env: {
       NODE_ENV: 'development',

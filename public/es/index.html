@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>leakcheck: ¿qué le cuenta tu dispositivo a cada sitio web?</title>
-<meta name="description" content="Mira, en directo, lo que tu navegador y tu conexión revelan a cada sitio web, y obtén un plan ordenado para reducirlo. Todo se ejecuta en tu navegador; no se guarda nada.">
+<title>ombre: ¿qué le dice tu dispositivo a cada sitio web?</title>
+<meta name="description" content="Mira, en directo, lo que tu navegador y tu conexión revelan a cada sitio web, y obtén una solución sencilla para cada problema. Todo ocurre en tu navegador; no se guarda nada.">
 <link rel="alternate" hreflang="en" href="/en/">
 <link rel="alternate" hreflang="fr" href="/fr/">
 <link rel="alternate" hreflang="es" href="/es/">
 <link rel="alternate" hreflang="x-default" href="/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/site.css">
 <script type="module" src="/js/app.js"></script>
 </head>
@@ -17,7 +18,7 @@
 
 <header class="site-header">
 <div class="wrap">
-<div class="brand pixel">leakcheck<span class="brand-cursor" aria-hidden="true">_</span></div>
+<div class="brand pixel">ombre<span class="brand-cursor" aria-hidden="true">_</span></div>
 <div class="header-end">
 <nav class="picker" aria-label="Idioma" data-i18n-attr="aria-label:nav.language">
 <a href="/en/" hreflang="en" lang="en" data-i18n="lang.en">English</a><span class="picker-sep" aria-hidden="true"> · </span><a href="/fr/" hreflang="fr" lang="fr" data-i18n="lang.fr">Français</a><span class="picker-sep" aria-hidden="true"> · </span><a href="/es/" hreflang="es" lang="es" aria-current="page" data-i18n="lang.es">Español</a>
@@ -33,7 +34,7 @@
 <main class="wrap">
 
 <section class="hero" aria-labelledby="hero-title">
-<p class="hero-prompt" data-i18n="hero.prompt">$ leakcheck --scan --local-only</p>
+<p class="hero-prompt" data-i18n="hero.prompt">$ ombre --scan --local-only</p>
 <h1 id="hero-title"><span data-i18n="hero.title">¿qué le cuenta tu dispositivo a cada sitio web?</span><span class="cursor" aria-hidden="true"></span></h1>
 <p class="lead" data-i18n="hero.lead">Las pruebas se ejecutan en tu navegador. Los resultados nunca salen de esta pestaña, y no se guarda nada al cerrarla.</p>
 </section>
@@ -58,30 +59,64 @@
 
 <section class="block" id="connection" aria-labelledby="connection-title">
 <div class="block-head">
-<h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">comprobar mi dirección ip</span></h2>
-<p class="block-sub" data-i18n="section.connection.sub">solo se ejecuta al hacer clic y solo contacta con el servidor de leakcheck</p>
+<h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">lo que los sitios ven de tu conexión</span></h2>
+<p class="block-sub" data-i18n="section.connection.sub">con un clic · solo consulta el servidor de ombre · no guarda nada</p>
 </div>
 <div class="action-box">
-<p data-i18n="connection.intro">Al pulsar el botón se envían unas pocas solicitudes al servidor de leakcheck y a ningún otro sitio. Lee la dirección desde la que llega tu conexión, la busca en su propia copia de una base de datos de IP y pregunta a WebRTC qué direcciones comparte. No se guarda nada.</p>
-<fieldset class="threats" role="radiogroup" aria-labelledby="vpn-legend">
-<legend class="threats-legend" id="vpn-legend" data-i18n="connection.vpn.legend">¿usas una VPN ahora mismo?</legend>
-<div class="threat-options">
-<label class="threat"><input type="radio" name="vpn" value="yes" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="connection.vpn.yes">sí, tengo una VPN activada</span></span></label>
-<label class="threat"><input type="radio" name="vpn" value="no" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="connection.vpn.no">sin VPN</span></span></label>
+<p data-i18n="connection.intro">Cada sitio que visitas sabe de dónde viene tu conexión. Pulsa el botón para ver lo que ve. Solo se consulta el servidor de ombre, y no guarda nada.</p>
+<button type="button" class="btn" id="run-connection" data-i18n="connection.run">VER LO QUE VEN LOS SITIOS</button>
 </div>
-</fieldset>
-<p id="vpn-hint" data-i18n="connection.vpn.hint">Responde primero a la pregunta y luego pulsa COMPROBAR MI IP.</p>
-<button type="button" class="btn" id="run-connection" aria-disabled="true" aria-describedby="vpn-hint" data-i18n="connection.run">COMPROBAR MI IP</button>
+
+<div class="result-card" id="conn-result" hidden>
+<p class="label" data-i18n="conn.sees">los sitios ven</p>
+<p class="result-lines" id="conn-lines"></p>
+<p class="result-note" id="conn-note" hidden></p>
+<dl class="result-details" id="conn-details">
+<div class="detail"><dt data-i18n="conn.ip">dirección ip</dt><dd class="detail-value" id="conn-ip"></dd><dd><button type="button" class="link-btn" id="reveal-ip" aria-pressed="false" data-i18n="conn.show">mostrar</button></dd></div>
+<div class="detail" id="conn-net-row"><dt data-i18n="conn.network">red</dt><dd class="detail-value" id="conn-net"></dd></div>
+<div class="detail"><dt data-i18n="conn.accuracy">precisión</dt><dd class="detail-value" data-i18n="conn.accuracy.value">la ciudad, no tu calle</dd></div>
+</dl>
 </div>
-<ul class="findings"></ul>
-<div class="actions" id="connection-tools" hidden>
-<button type="button" class="btn btn-secondary" id="reveal-ip" aria-pressed="false" data-i18n="connection.reveal">MOSTRAR LA IP COMPLETA</button>
+
+<div class="question" id="conn-question" hidden>
+<h3 class="question-title" id="conn-q" data-i18n="conn.q">¿eres tú?</h3>
+<div class="choices" role="radiogroup" aria-labelledby="conn-q">
+<button type="button" class="choice" role="radio" aria-checked="false" tabindex="0" data-answer="yes"><span class="choice-dot" aria-hidden="true"></span><span class="choice-text" id="conn-opt-yes"></span></button>
+<button type="button" class="choice" role="radio" aria-checked="false" tabindex="-1" data-answer="vpn"><span class="choice-dot" aria-hidden="true"></span><span class="choice-text" data-i18n="conn.opt.vpn">no, es mi VPN, Tor o iCloud Private Relay</span></button>
+<button type="button" class="choice" role="radio" aria-checked="false" tabindex="-1" data-answer="unsure"><span class="choice-dot" aria-hidden="true"></span><span class="choice-text" data-i18n="conn.opt.unsure">no lo sé</span></button>
 </div>
-<div class="action-box" id="vpn-off-box" hidden>
-<p data-i18n="connection.vpnOff.note">Las buenas VPN, como Nym, Mullvad o Proton, no dejan ninguna señal que un sitio pueda ver. Para comprobar la tuya, desactívala y pulsa el botón: la página vuelve a preguntar al servidor de leakcheck y compara las dos direcciones.</p>
-<button type="button" class="btn btn-secondary" id="vpn-off" data-i18n="connection.vpnOff.run">COMPROBAR SIN LA VPN</button>
-<p class="vpn-off-result" id="vpn-off-result" aria-live="polite"></p>
 </div>
+
+<div class="outcome" id="conn-outcome" aria-live="polite"></div>
+
+<section class="vpn-check" id="vpn-check" aria-labelledby="vpn-title" hidden>
+<div class="recap">
+<div class="recap-text">
+<p class="label" data-i18n="conn.sees">los sitios ven</p>
+<p class="recap-line" id="vpn-recap"></p>
+</div>
+<span class="said" data-i18n="vpn.youSaid">dijiste: es mi VPN</span>
+</div>
+<div class="block-head">
+<h3 id="vpn-title" tabindex="-1"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="vpn.title">tu VPN, comprobada</span></h3>
+<p class="block-sub" data-i18n="vpn.sub">3 preguntas, respuestas automáticas</p>
+</div>
+<div class="vpn-intro">
+<p data-i18n="vpn.intro">Una buena VPN no deja rastro visible para un sitio, así que comprobamos lo que suele fallar.</p>
+<p class="vpn-summary" id="vpn-summary" aria-live="polite"></p>
+</div>
+<ul class="vpn-rows" id="vpn-rows"></ul>
+
+<div class="compare" id="vpn-compare" hidden>
+<h4 class="compare-title" data-i18n="vpn.cmp.title">doble comprobación: compara con la VPN apagada</h4>
+<ol class="compare-steps" id="vpn-steps"></ol>
+<div class="compare-run">
+<p data-i18n="vpn.cmp.reassure">Solo para esta petición, el servidor de ombre ve tu dirección real. No guarda nada.</p>
+<button type="button" class="btn" id="vpn-off" data-i18n="vpn.cmp.run">COMPARAR</button>
+</div>
+<div class="compare-result" id="vpn-off-result" aria-live="polite"></div>
+</div>
+</section>
 </section>
 
 <section class="block" id="localnet" aria-labelledby="localnet-title">
@@ -96,39 +131,24 @@
 <ul class="findings"></ul>
 </section>
 
-<section class="cta" id="fix-cta" aria-labelledby="fix-cta-title">
-<div class="cta-text">
-<h2 id="fix-cta-title" data-i18n="fix.cta.title">empieza por las 3 primeras</h2>
-<p data-i18n="section.fix.sub">Una lista corta, ordenada según cuánto oculta cada cambio, con los pasos para tu navegador.</p>
-</div>
-<button type="button" class="btn" id="show-fixes" aria-expanded="false" aria-controls="fix" data-i18n="fix.cta.run">VER MIS SOLUCIONES</button>
-</section>
-
-<section class="block" id="fix" aria-labelledby="fix-title" hidden>
+<section class="block" id="fix" aria-labelledby="fix-title">
 <div class="block-head">
-<h2 id="fix-title" tabindex="-1"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.fix.title">tu plan de soluciones</span></h2>
-<p class="block-sub" data-i18n="fix.sub">Ordenadas según cuánto oculta cada cambio frente al esfuerzo. Los pasos corresponden al navegador detectado. Nada de esto está patrocinado.</p>
+<h2 id="fix-title" tabindex="-1"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="fix.title">cómo solucionarlo</span></h2>
+<p class="block-sub" data-i18n="fix.sub">primero, lo que más protege</p>
 </div>
-<fieldset class="threats" role="radiogroup" aria-labelledby="threat-legend">
-<legend class="threats-legend" id="threat-legend" data-i18n="fix.threat.legend">¿de quién te escondes?</legend>
-<div class="threat-options">
-<label class="threat"><input type="radio" name="threat" value="ads" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.ads.title">anunciantes y rastreadores</span><span class="threat-desc" data-i18n="fix.threat.ads.desc">Empresas que te siguen de un sitio a otro para crear un perfil.</span></span></label>
-<label class="threat"><input type="radio" name="threat" value="network" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.network.title">mi proveedor de internet o el wifi</span><span class="threat-desc" data-i18n="fix.threat.network.desc">Quien gestiona la red puede ver qué sitios visitas.</span></span></label>
-<label class="threat"><input type="radio" name="threat" value="targeted" autocomplete="off"><span class="threat-text"><span class="threat-title" data-i18n="fix.threat.targeted.title">alguien que me busca</span><span class="threat-desc" data-i18n="fix.threat.targeted.desc">Una persona o un grupo que intenta identificarte o localizarte a ti en concreto.</span></span></label>
-</div>
-</fieldset>
-<div class="progress" role="group" aria-label="progreso" data-i18n-attr="aria-label:fix.progress.label">
+<p class="hint" id="fix-empty" data-i18n="fix.empty">Primero lanza el análisis: las soluciones salen de lo que encuentre.</p>
+<div class="fix-plan" id="fix-plan" hidden>
+<p class="lead" id="fix-lead"></p>
+<p class="policy" data-i18n="fix.policy">Nombramos herramientas, nunca una sola marca: cada solución ofrece varias opciones, por orden alfabético. Nada está patrocinado y no hay enlaces de afiliado.</p>
+<div class="progress" id="fix-progress" role="group" aria-label="progreso" data-i18n-attr="aria-label:fix.progress.label">
 <p class="progress-count" id="fix-done"></p>
 <div class="progress-bar" aria-hidden="true"></div>
-<button type="button" class="btn" id="rescan" data-i18n="fix.rescan.run">ANALIZAR DE NUEVO</button>
+<button type="button" class="btn btn-secondary" id="rescan" data-i18n="fix.rescan">VOLVER A COMPROBAR</button>
 <p class="rescan-result" id="rescan-result"></p>
 </div>
-<aside class="note" aria-labelledby="note-title">
-<p class="label" id="note-title" data-i18n="fix.note.title">lee esto primero</p>
-<p data-i18n="fix.note.text">Cambiar muchos ajustes a mano puede hacerte más fácil de reconocer, porque casi nadie tiene tu misma combinación. Las mejores soluciones te hacen parecer igual que todos: un navegador que da las mismas respuestas a todos sus usuarios.</p>
-</aside>
 <ol class="fix-list"></ol>
 <p class="hint" data-i18n="fix.ticks">Tus marcas se quedan en esta pestaña y desaparecen al cerrarla.</p>
+</div>
 </section>
 
 </main>
@@ -137,6 +157,7 @@
 <div class="wrap footer-links">
 <p><span data-i18n="footer.cookies">sin cookies</span><span aria-hidden="true"> · </span><span data-i18n="footer.analytics">sin analítica</span><span aria-hidden="true"> · </span><span data-i18n="footer.source">código abierto</span></p>
 <a href="https://db-ip.com" data-i18n="footer.dbip">Datos IP de DB-IP</a>
+<a href="/es/legal/" data-i18n="footer.legal">aviso legal y privacidad</a>
 </div>
 </footer>
 

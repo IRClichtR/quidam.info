@@ -48,3 +48,9 @@ it('works on a real server', async () => {
   expect(/** @type {any} */ (s.address()).port).toBeGreaterThan(0);
   await new Promise((r) => s.close(() => r(undefined)));
 });
+
+it('listens only on HOST when one is given', async () => {
+  const { server, calls } = fakeServer(null, []);
+  await listenDualStack(server, 8080, '127.0.0.1');
+  expect(calls).toEqual([{ port: 8080, host: '127.0.0.1' }]);
+});

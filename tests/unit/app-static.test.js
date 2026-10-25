@@ -15,10 +15,10 @@ let base = '';
 let map;
 
 /** Raw request so the path is sent unnormalised. */
-function raw(method, path, body) {
+function raw(method, path, body, headers = {}) {
   return new Promise((resolve, reject) => {
     const u = new URL(base);
-    const req = http.request({ host: u.hostname, port: u.port, method, path }, (res) => {
+    const req = http.request({ host: u.hostname, port: u.port, method, path, headers }, (res) => {
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
       res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks).toString() }));
@@ -34,6 +34,7 @@ beforeAll(async () => {
     cfg: loadConfig({}),
     staticMap: map,
     whoami: (_req, res) => { res.writeHead(200); res.end('{}'); },
+    hasData: () => false,
   });
   server = http.createServer(app);
   await new Promise((r) => server.listen(0, '127.0.0.1', () => r(undefined)));
@@ -136,5 +137,67 @@ describe('static serving', () => {
     expect(r).toBe(200);
     await new Promise((r2) => s.close(() => r2(undefined)));
     fs.rmSync(dir, { recursive: true });
+  });
+  it('sends compressed copies with their own ETag, and 304 when the copy is current', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lc-'));
+    fs.writeFileSync(path.join(dir, 'app.js'), 'console.log("ombre");\n'.repeat(200));
+    fs.writeFileSync(path.join(dir, 'f.woff2'), Buffer.alloc(2000, 1));
+    const m = await buildAllowlist(dir);
+    const s = http.createServer(createApp({ cfg: loadConfig({}), staticMap: m, whoami: () => {} }));
+    await new Promise((r) => s.listen(0, '127.0.0.1', () => r(undefined)));
+    const get = (/** @type {string} */ p, /** @type {Record<string,string>} */ h = {}) => new Promise((resolve) => {
+      http.get({ host: '127.0.0.1', port: /** @type {any} */ (s.address()).port, path: p, headers: h }, (res) => {
+        const chunks = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
+      });
+    });
+    /** @type {any} */
+    const plain = await get('/app.js');
+    expect(plain.headers['content-encoding']).toBeUndefined();
+    expect(plain.headers.vary).toBe('accept-encoding');
+    expect(plain.headers['content-length']).toBe(String(plain.body.length));
+    /** @type {any} */
+    const br = await get('/app.js', { 'accept-encoding': 'gzip, deflate, br' });
+    expect(br.headers['content-encoding']).toBe('br');
+    expect(br.body.length).toBeLessThan(plain.body.length);
+    expect(br.headers.etag).not.toBe(plain.headers.etag);
+    /** @type {any} */
+    const gz = await get('/app.js', { 'accept-encoding': 'gzip, br;q=0' });
+    expect(gz.headers['content-encoding']).toBe('gzip');
+    /** @type {any} */
+    const again = await get('/app.js', { 'accept-encoding': 'br', 'if-none-match': br.headers.etag });
+    expect(again.status).toBe(304);
+    expect(again.body.length).toBe(0);
+    /** @type {any} */
+    const font = await get('/f.woff2', { 'accept-encoding': 'br' });
+    expect(font.headers['content-encoding']).toBeUndefined();
+    expect(font.headers['cache-control']).toBe('public, max-age=2592000');
+    expect(plain.headers['cache-control']).toBe('no-cache');
+    await new Promise((r) => s.close(() => r(undefined)));
+    fs.rmSync(dir, { recursive: true });
+  });
+
+  it('redirects any folder without its trailing slash, nested ones too', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lc-'));
+    fs.mkdirSync(path.join(dir, 'en', 'legal'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'en', 'legal', 'index.html'), '<p>legal</p>');
+    const m = await buildAllowlist(dir);
+    const s = http.createServer(createApp({ cfg: loadConfig({}), staticMap: m, whoami: () => {} }));
+    await new Promise((r) => s.listen(0, '127.0.0.1', () => r(undefined)));
+    const port = /** @type {any} */ (s.address()).port;
+    const res = await new Promise((resolve) => http.get({ host: '127.0.0.1', port, path: '/en/legal?x=1' }, (r) => { r.resume(); resolve(r); }));
+    expect(/** @type {any} */ (res).statusCode).toBe(301);
+    expect(/** @type {any} */ (res).headers.location).toBe('/en/legal/?x=1');
+    await new Promise((r) => s.close(() => r(undefined)));
+    fs.rmSync(dir, { recursive: true });
+  });
+
+  it('answers /healthz, uncached, with whether the IP data is loaded', async () => {
+    const r = await raw('GET', '/healthz');
+    expect(r.status).toBe(200);
+    expect(r.headers['cache-control']).toBe('no-store');
+    expect(JSON.parse(r.body)).toEqual({ ok: true, data: false });
+    expect((await raw('HEAD', '/healthz')).body).toBe('');
   });
 });
