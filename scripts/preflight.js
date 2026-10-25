@@ -63,7 +63,7 @@ if (shipVcr) warnings.push('SHIP_VCR_FONT=1: only keep this if you have the font
 const pkg = JSON.parse(/** @type {string} */ (await read('package.json')));
 const licence = (await read('LICENSE')) ?? '';
 if (/GNU GENERAL PUBLIC LICENSE\s+Version 2/.test(licence) && pkg.license !== 'GPL-2.0-only' && pkg.license !== 'GPL-2.0-or-later') {
-  warnings.push(`package.json says "license": "${pkg.license}" but LICENSE is the GPL version 2: pick one and make both say it (docs/Go_live.md, step 1).`);
+  warnings.push(`package.json says "license": "${pkg.license}" but LICENSE is the GPL version 2: pick one and make both say it (docs/Go_live.md, step 0.2).`);
 }
 
 // 5. Nothing a visitor should never see is in public/.
