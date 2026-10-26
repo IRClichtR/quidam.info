@@ -111,7 +111,8 @@ Menu names to confirm:
 - [x] Repository licence: GPL-2.0-only in both `LICENSE` and `package.json` (2026-10-25, docs/Go_live.md, step 0.2).
 - [x] Name changed from "leakcheck" (taken: LeakCheck, leakcheck.io) to "ombre", then to **quidam** (2026-10-25). "ombre" was dropped because of the French mark OMBRE, INPI FR 5193192 (class 42: software, SaaS).
 - [x] Trademark search for QUIDAM in classes 9, 38, 42, 45 (INPI, WIPO Global Brand Database; TMview blocked automated access), 2026-10-25: risk low to medium while the site stays non-commercial. Closest marks: FR 4521441 (Synexser France, class 42 SaaS) and FR 4578161 (class 45 social networking), neither visibly used; Cirque du Soleil's EU mark expired in 2017. Details in docs/Go_live.md, step 0.1.
-- [ ] Domain `quidam.io` bought (free on 2026-10-25; `quidam.fr`, `quidam.eu`, `quidam.app` are taken), owner data masking on.
+- [x] Domains bought at Hostinger (2026-10-26): `quidam.info` (main), `quidam.online` and `quidam.tech` (redirected to it).
+- [ ] Privacy protection on for all three; auto-renewal on for `quidam.info` only (docs/Go_live.md, step 2).
 
 ## I. Manual checks still to do
 

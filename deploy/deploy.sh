@@ -35,7 +35,12 @@ done
 : "${DOMAIN:?set DOMAIN in deploy/config.sh}" "${SERVER:?set SERVER in deploy/config.sh}"
 SSH_USER="${SSH_USER:-deploy}"
 SHIP_VCR_FONT="${SHIP_VCR_FONT:-0}"
+EXTRA_DOMAINS="${EXTRA_DOMAINS:-}"
 [ "$DOMAIN" != "example.org" ] || fail "DOMAIN in deploy/config.sh is still the example. Put your own domain."
+for d in $EXTRA_DOMAINS; do
+  [[ "$d" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || fail "EXTRA_DOMAINS in deploy/config.sh: \"$d\" is not a bare domain (lower case, no https://, no slash)."
+  [ "$d" != "$DOMAIN" ] || fail "EXTRA_DOMAINS in deploy/config.sh lists $DOMAIN, which is already DOMAIN."
+done
 TARGET="$SSH_USER@$SERVER"
 BASE=/opt/quidam
 
@@ -112,6 +117,12 @@ if [ "$FIRST_RUN" = 1 ] || ! remote <<<'test -f /etc/quidam/quidam.env'; then
   say "Installing the Caddy, service and environment settings for $DOMAIN"
   tmp="$(mktemp -d)"
   sed "s/__DOMAIN__/$DOMAIN/g" deploy/Caddyfile.template > "$tmp/Caddyfile"
+  if [ -n "$EXTRA_DOMAINS" ]; then
+    names=""
+    for d in $EXTRA_DOMAINS; do names="$names${names:+, }$d, www.$d"; done
+    printf '\n# Other domains (EXTRA_DOMAINS in deploy/config.sh) and their www go to the main one, keeping the path.\n%s {\n\tredir https://%s{uri} permanent\n}\n' \
+      "$names" "$DOMAIN" >> "$tmp/Caddyfile"
+  fi
   sed "s/__DOMAIN__/$DOMAIN/g" deploy/quidam.env.template > "$tmp/quidam.env"
   cp deploy/quidam.service "$tmp/quidam.service"
   rsync -t "$tmp/Caddyfile" "$tmp/quidam.env" "$tmp/quidam.service" "$TARGET:/home/deploy/staging/"

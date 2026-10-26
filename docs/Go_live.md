@@ -17,7 +17,7 @@ Everything that can be automated is automated:
 Prices and facts below were checked on **25 October 2026**. Hosting prices move; re-check before you pay.
 
 Time needed: about half a day, most of it waiting for a domain or a DNS change.
-Money needed: about **€8 a month** for the server and about **€72 a year** for the `.io` domain.
+Money needed: about **€8 a month** for the server and about **$32 a year** for `quidam.info` from the second year (more if you keep `quidam.online` and `quidam.tech`, step 2).
 
 ---
 
@@ -78,7 +78,7 @@ What the search found on 25 October 2026 (a research summary, not legal advice):
 
 Risk: **low to medium**. It stays low as long as the site is **free and non-commercial** (trademark infringement needs use "in the course of trade"). Don't file your own QUIDAM mark in class 42 without advice: it would likely be opposed. Adding ads, paid features or donations raises the risk; read this again first.
 
-Domain: `quidam.fr`, `quidam.eu` and `quidam.app` are taken; **`quidam.io` was free** on 25 October 2026 (step 2).
+Domain: `quidam.fr`, `quidam.eu` and `quidam.app` are taken. The site uses **`quidam.info`** (step 2).
 
 The name appears in the page text, the legal pages and the server's names (service, user, folders). To list every place, for example if you ever rename again:
 
@@ -101,7 +101,7 @@ Open these with an email address you check. **Turn on two-factor authentication 
 | Account | Why | Cost |
 |---|---|---|
 | **Hetzner Cloud** ([accounts.hetzner.com](https://accounts.hetzner.com/signUp)) | the server | about €7.19/month incl. VAT |
-| **OVHcloud** ([ovhcloud.com](https://www.ovhcloud.com/fr/domains/)) | the domain name | about €71.75/year incl. VAT for a `.io` (€59.79 excl. VAT); check the first-year price in the basket |
+| **Hostinger** ([hostinger.com](https://www.hostinger.com)) | the domain names (bought 26 October 2026) | `quidam.info` about $32/year after the first year; see step 2 for the other two |
 | **UptimeRobot** ([uptimerobot.com](https://uptimerobot.com)) | tells you when the site is down (step 9) | free |
 | **GitHub** (you already have one) | public source code (optional) | free |
 
@@ -117,15 +117,27 @@ The legal pages publish an email address. Don't use your personal one: it will g
 
 ## 2. Buy the domain
 
-1. The name is **`quidam.io`** (step 0.1). Two things to know about `.io`:
-   - it costs about **9 times a `.fr`** (about €72 a year);
-   - it is the country ending of the British Indian Ocean Territory. The UK–Mauritius treaty on the Chagos Islands leaves its long-term future somewhat uncertain. It is widely expected to keep working, but if it ever winds down you would need a new domain (steps 2, 5, 6 and 7 again).
-2. On OVHcloud, search `quidam.io`, add it to the basket, and refuse the extras (hosting, email, "DNS anycast": you need none of them).
-3. Owner details: your real name and address. Unlike `.fr`, the `.io` registry doesn't hide a private owner by itself: in the OVHcloud panel (Domains › your domain › General information), check that **owner data masking** ("Masquage des données du propriétaire", OVHcloud's free privacy option) is **on**, so your name and address don't appear in the public WHOIS. Leave the **technical contact** as OVHcloud.
-4. Pay. Turn on **automatic renewal** in the OVHcloud control panel (Domains › your domain › Renewal), so the name never lapses.
-5. In the same panel, turn on **DNSSEC** (a signature that stops anyone faking your DNS answers): Domains › your domain › DNSSEC › enable. It's one click when OVHcloud also runs your DNS, which it does by default.
+Bought on 26 October 2026 at **Hostinger**: **`quidam.info`** (the site's address) plus `quidam.online` and `quidam.tech`, which send visitors to `quidam.info` (step 7, `EXTRA_DOMAINS`). `quidam.io` was free but about €72 a year.
 
-**Check:** the domain appears in your OVHcloud panel as "active" (it can take up to an hour), and `whois quidam.io` shows neither your name nor your address.
+**Watch the renewal prices.** These endings are cheap the first year and full price after (Hostinger, checked 26 October 2026 via domainoffer.net; confirm on your invoice):
+
+| Domain | 1st year | Each year after |
+|---|---|---|
+| `quidam.info` | $3.39 | $31.99 |
+| `quidam.online` | $0.84 | $35.99 |
+| `quidam.tech` | $5.94 | $63.99 |
+
+Keep automatic renewal **on for `quidam.info` only**. Turn it **off** for the other two unless you decide, before they expire, that they're worth ~$100 a year. When one lapses, remove it from `EXTRA_DOMAINS` and run `npm run deploy -- --first-run`, so Caddy stops trying to renew its certificate.
+
+In hPanel (**Domains › Domain portfolio › your domain › Manage**), for each domain:
+
+1. **Privacy protection: on.** Unlike `.fr`, these registries don't hide a private owner by themselves; Hostinger's free privacy protection keeps your name and address out of the public WHOIS.
+2. **Auto-renewal**: on for `quidam.info`, off for the others (see above).
+3. **Nameservers**: keep Hostinger's default ones, so the DNS records of step 6 are edited in hPanel.
+4. **DNSSEC** (a signature that stops anyone faking your DNS answers): turn it on if hPanel offers it for the domain (DNS / Nameservers › DNSSEC). If it doesn't, the site still works; HTTPS protects visitors either way.
+5. **Two-factor authentication** on the Hostinger account itself (step 1).
+
+**Check:** each domain shows as **Active** in hPanel (it can take up to an hour), and `whois quidam.info` shows neither your name nor your address.
 
 ---
 
@@ -276,7 +288,7 @@ The `false` option holds only while the site stays **non-professional**: no ads,
 
 ## 6. Point the domain at the server (DNS)
 
-DNS records tell the world which server answers for which name. In OVHcloud: **Web Cloud › Domain names › your domain › DNS zone**. First **delete** any existing `A`, `AAAA` and `CNAME` records for `@`, `www`, `v4`, `v6` (OVHcloud adds some pointing at a parking page). Then **Add an entry** for each line:
+DNS records tell the world which server answers for which name. In Hostinger's hPanel: **Domains › Domain portfolio › `quidam.info` › Manage › DNS / Nameservers › DNS records**. First **delete** any existing `A`, `AAAA` and `CNAME` records for `@`, `www`, `v4`, `v6` (Hostinger adds some pointing at a parking page). Then add a record for each line (in hPanel, the sub-domain field is called **Name**, and an empty sub-domain is written `@`):
 
 | Type | Sub-domain | Target | Why |
 |---|---|---|---|
@@ -304,6 +316,19 @@ dig +short A v6.yourdomain    # NOTHING
 
 (`dig` is in the `dnsutils` package: `sudo apt install dnsutils`.) The empty answers matter: if `v4` had an IPv6 address, the IPv6 check would quietly stop working.
 
+**The redirect domains** (`quidam.online`, `quidam.tech`): in the same hPanel page of **each** of them, delete the parking `A`, `AAAA` and `CNAME` records for `@` and `www`, then add only these (no `v4`, no `v6`):
+
+| Type | Name | Target |
+|---|---|---|
+| A | `@` | your IPv4 |
+| AAAA | `@` | your IPv6 |
+| A | `www` | your IPv4 |
+| AAAA | `www` | your IPv6 |
+| CAA | `@` | `0 issue "letsencrypt.org"` |
+| CAA | `@` | `0 issue "sectigo.com"` |
+
+Check with `dig +short A quidam.online` and `dig +short AAAA www.quidam.tech` (your addresses).
+
 ---
 
 ## 7. First deployment
@@ -317,7 +342,8 @@ cp deploy/config.example.sh deploy/config.sh
 Edit `deploy/config.sh` (git-ignored):
 
 ```sh
-DOMAIN="yourdomain"          # same as site.domain in legal/owner.json
+DOMAIN="quidam.info"         # same as site.domain in legal/owner.json
+EXTRA_DOMAINS="quidam.online quidam.tech"   # redirected to DOMAIN; "" if none
 SERVER="203.0.113.10"        # the server's IPv4
 SSH_USER="deploy"
 SHIP_VCR_FONT=0              # see step 10, fonts
@@ -363,7 +389,7 @@ Go through this list once after the first deployment, and again after any change
 curl -sI https://yourdomain/en/ | grep -iE "^(HTTP|strict-transport|content-security|referrer)"
 ```
 
-Expect `HTTP/2 200`, a `strict-transport-security` line, a `content-security-policy` line and `referrer-policy: no-referrer`. Also `curl -sI http://yourdomain/` answers with a redirect to `https://`, and `curl -sI https://www.yourdomain/` with a redirect to the bare domain.
+Expect `HTTP/2 200`, a `strict-transport-security` line, a `content-security-policy` line and `referrer-policy: no-referrer`. Also `curl -sI http://yourdomain/` answers with a redirect to `https://`, and `curl -sI https://www.yourdomain/` with a redirect to the bare domain. Same for the redirect domains: `curl -sI https://quidam.online/fr/` and `curl -sI https://www.quidam.tech/` answer `308` with `location: https://quidam.info/…`.
 
 **The two single-family names**
 
@@ -471,7 +497,7 @@ Run it at a quiet hour: it is real traffic.
 - **Hetzner's network-level DDoS protection** is free and always on (floods of packets). Floods of real web requests are slowed by quidam's own limits: 30 lookups a minute per address, 60 STUN answers a minute per address, at most 100,000 addresses tracked at once, 20,000 open connections.
 - No paid extra (CDN, load balancer, managed database) is used, so nothing can quietly start billing.
 
-Your total, in a normal year: 12 × €7.19 + €71.75 for the domain ≈ **€158**.
+Your total, in a normal year: 12 × €7.19 + about $32 (≈ €30) for `quidam.info` ≈ **€116**, plus about $100 a year if you renew `quidam.online` and `quidam.tech`.
 
 If the site becomes very popular, in this order:
 
@@ -493,7 +519,7 @@ With those, a lost server is rebuilt in 20 minutes: steps 4, 6 (new addresses), 
 ### 11.6 Yearly tasks (put them in your calendar)
 
 - [ ] `npm run legal && npm run deploy`: renews `security.txt` and the "last updated" date.
-- [ ] Check that the domain renewed and the card on file at OVHcloud and Hetzner is still valid.
+- [ ] Check that `quidam.info` renewed and the card on file at Hostinger and Hetzner is still valid. A month before `quidam.online` and `quidam.tech` expire, decide whether to keep them (step 2).
 - [ ] Re-read the legal page: is it still true? (Did you add a feature that keeps data, or donations?)
 - [ ] Ubuntu 24.04 gets security updates until 2029; plan the move to the next LTS before then (rebuild a server with step 4, deploy, switch DNS).
 - [ ] Node 24 is supported until April 2028: update the major version in `deploy/cloud-init.yaml` before then.
@@ -558,7 +584,7 @@ curl -s http://127.0.0.1:8080/healthz     # the app itself, without Caddy
 
 ## 14. Words used in this guide
 
-- **Domain**: the name people type (`mysite.fr`). Rented by the year from a **registrar** (OVHcloud).
+- **Domain**: the name people type (`mysite.fr`). Rented by the year from a **registrar** (Hostinger).
 - **DNS**: the internet's directory, turning names into addresses. **A** records point to IPv4 addresses, **AAAA** to IPv6 addresses.
 - **IPv4 / IPv6**: the older (`203.0.113.10`) and newer (`2a01:…`) forms of internet addresses. Many connections have both.
 - **VPS / cloud server**: a small virtual computer you rent by the month in a data centre.
