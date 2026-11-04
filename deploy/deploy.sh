@@ -50,6 +50,10 @@ remote() { ssh -o BatchMode=yes "$TARGET" bash -s -- "$@"; }
 say "Checking that the server answers over SSH ($TARGET)"
 ssh -o BatchMode=yes -o ConnectTimeout=10 "$TARGET" true \
   || fail "cannot log in as $TARGET. Check SERVER in deploy/config.sh and that your SSH key is the one in cloud-init.yaml."
+# The service runs as quidam and reads the releases through their group, which deploy can only set
+# if it is in that group (servers set up before this check: docs/Go_live.md, step 13).
+ssh -o BatchMode=yes "$TARGET" 'id -nG | tr " " "\n" | grep -qx quidam' \
+  || fail "$SSH_USER is not in the quidam group on the server, so quidam could not read the release. Fix it once as root: usermod -aG quidam $SSH_USER (docs/Go_live.md, step 13)."
 
 # On the server: point `current` at a release folder and restart, in one atomic step
 # (a new link is made beside the old one, then renamed over it).
@@ -144,14 +148,16 @@ say "Switching to version $RELEASE and restarting"
 remote <<EOF
 set -euo pipefail
 $SWITCH_AND_RESTART
-prev=\$(readlink -f $BASE/current 2>/dev/null || true)
+# Only a real link counts as a previous version: on the first run there is none (readlink -f would
+# still print the path, and going "back" to it would make current point at itself).
+prev=\$( [ -L $BASE/current ] && readlink -e $BASE/current 2>/dev/null || true)
 switch $BASE/releases/$RELEASE
 if healthy; then
   echo "Version $RELEASE answers its health check."
 else
   echo "Version $RELEASE does not answer. Its last log lines:"
   sudo /usr/bin/journalctl -u quidam -n 30 --no-pager || true
-  if [ -n "\$prev" ] && [ -d "\$prev" ]; then
+  if [ -n "\$prev" ] && [ -d "\$prev" ] && [ "\$prev" != "$BASE/releases/$RELEASE" ]; then
     echo "Going back to \$(basename "\$prev")."
     switch "\$prev"
     healthy && echo "The previous version is running again." || echo "The previous version does not answer either."

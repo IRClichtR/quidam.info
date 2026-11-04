@@ -29,6 +29,8 @@ users:
   - name: deploy
     shell: /bin/bash
     lock_passwd: true
+    # In the quidam group so the releases it uploads can be given that group (the service reads them as quidam).
+    groups: [quidam]
     ssh_authorized_keys:
       # PASTE YOUR PUBLIC KEY ON THE NEXT LINE, in place of everything after the dash and space.
       - ssh-ed25519 AAAA... REPLACE_WITH_YOUR_PUBLIC_KEY
@@ -69,7 +71,7 @@ write_files:
       APT::Periodic::AutocleanInterval "7";
 
   # Reboot by itself at 04:30 UTC when an update needs it (a few seconds of downtime, at night in Europe).
-  - path: /etc/apt/apt.conf.d/52ombre-upgrades
+  - path: /etc/apt/apt.conf.d/52quidam-upgrades
     permissions: '0644'
     content: |
       Unattended-Upgrade::Automatic-Reboot "true";

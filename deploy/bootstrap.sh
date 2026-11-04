@@ -32,6 +32,8 @@ apt-get install -y ca-certificates curl gnupg debian-keyring debian-archive-keyr
 say "Creating the accounts: deploy (you, by SSH key) and quidam (runs the site, cannot log in)"
 id quidam >/dev/null 2>&1 || useradd --system --shell /usr/sbin/nologin --no-create-home --home-dir /nonexistent quidam
 id deploy >/dev/null 2>&1 || useradd --create-home --shell /bin/bash deploy
+# deploy must be in the quidam group, so the releases it uploads can be given that group (the service reads them as quidam).
+usermod -aG quidam deploy
 passwd -l deploy >/dev/null
 install -d -o deploy -g deploy -m 0700 /home/deploy/.ssh
 printf '%s\n' "$KEY" > /home/deploy/.ssh/authorized_keys
@@ -52,7 +54,7 @@ APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "1";
 APT::Periodic::AutocleanInterval "7";
 EOF
-cat > /etc/apt/apt.conf.d/52ombre-upgrades <<'EOF'
+cat > /etc/apt/apt.conf.d/52quidam-upgrades <<'EOF'
 Unattended-Upgrade::Automatic-Reboot "true";
 Unattended-Upgrade::Automatic-Reboot-Time "04:30";
 Unattended-Upgrade::Remove-Unused-Dependencies "true";
