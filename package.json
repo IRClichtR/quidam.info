@@ -19,16 +19,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/IRClichtR/leak_checker.git"
+    "url": "git+https://github.com/IRClichtR/quidam.info.git"
   },
   "keywords": [],
   "author": "",
   "license": "GPL-2.0-only",
   "type": "module",
   "bugs": {
-    "url": "https://github.com/IRClichtR/leak_checker/issues"
+    "url": "https://github.com/IRClichtR/quidam.info/issues"
   },
-  "homepage": "https://github.com/IRClichtR/leak_checker#readme",
+  "homepage": "https://github.com/IRClichtR/quidam.info#readme",
   "engines": {
     "node": ">=24"
   },
