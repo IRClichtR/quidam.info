@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>quidam: ¿qué le dice tu dispositivo a cada sitio web?</title>
+<meta name="description" content="Mira, en directo, lo que tu navegador y tu conexión revelan a cada sitio web, y obtén una solución sencilla para cada problema. Todo ocurre en tu navegador; no se guarda nada.">
+<link rel="alternate" hreflang="en" href="/en/">
+<link rel="alternate" hreflang="fr" href="/fr/">
+<link rel="alternate" hreflang="es" href="/es/">
+<link rel="alternate" hreflang="x-default" href="/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/site.css">
+<script type="module" src="/js/app.js"></script>
+</head>
+<body>
+<a class="skip" id="skip" href="#results" data-i18n="skip">Ir a los resultados</a>
+
+<header class="site-header">
+<div class="wrap">
+<div class="brand pixel">quidam<span class="brand-cursor" aria-hidden="true">_</span></div>
+<div class="header-end">
+<nav class="picker" aria-label="Idioma" data-i18n-attr="aria-label:nav.language">
+<a href="/en/" hreflang="en" lang="en" data-i18n="lang.en">English</a><span class="picker-sep" aria-hidden="true"> · </span><a href="/fr/" hreflang="fr" lang="fr" data-i18n="lang.fr">Français</a><span class="picker-sep" aria-hidden="true"> · </span><a href="/es/" hreflang="es" lang="es" aria-current="page" data-i18n="lang.es">Español</a>
+</nav>
+<div class="stored">
+<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 2.5 3.8v4c0 3.3 2.3 5.6 5.5 6.7 3.2-1.1 5.5-3.4 5.5-6.7v-4Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+<span data-i18n="header.stored" data-n="0">0 bytes guardados</span>
+</div>
+</div>
+</div>
+</header>
+
+<main class="wrap">
+
+<section class="hero" aria-labelledby="hero-title">
+<p class="hero-prompt" data-i18n="hero.prompt">$ quidam --scan --local-only</p>
+<h1 id="hero-title"><span data-i18n="hero.title">¿qué le cuenta tu dispositivo a cada sitio web?</span><span class="cursor" aria-hidden="true"></span></h1>
+<p class="lead" data-i18n="hero.lead">Las pruebas se ejecutan en tu navegador. Los resultados nunca salen de esta pestaña, y no se guarda nada al cerrarla.</p>
+</section>
+
+<section class="summary" id="results" tabindex="-1" aria-labelledby="results-title">
+<h2 class="label" id="results-title" data-i18n="results.title">resumen del análisis</h2>
+<div class="tiles"></div>
+<p class="hint" data-i18n="results.empty">Todavía no hay análisis. Pulsa INICIAR EL ANÁLISIS para ver lo que revela este navegador.</p>
+</section>
+
+<section class="block" id="browser" aria-labelledby="browser-title">
+<div class="block-head">
+<h2 id="browser-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.browser.title">tu navegador</span></h2>
+<p class="block-sub" data-i18n="section.browser.sub">cualquier página lo lee, sin pedir permiso</p>
+</div>
+<div class="action-box">
+<p data-i18n="scan.intro">Al pulsar el botón se lee lo que este navegador muestra a cada página que visitas. Nada sale de esta pestaña.</p>
+<button type="button" class="btn" id="run-scan" data-i18n="scan.run">INICIAR EL ANÁLISIS</button>
+</div>
+<ul class="findings"></ul>
+</section>
+
+<section class="block" id="connection" aria-labelledby="connection-title">
+<div class="block-head">
+<h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">lo que los sitios ven de tu conexión</span></h2>
+<p class="block-sub" data-i18n="section.connection.sub">con un clic · solo consulta el servidor de quidam · no guarda nada</p>
+</div>
+<div class="action-box">
+<p data-i18n="connection.intro">Cada sitio que visitas sabe de dónde viene tu conexión. Pulsa el botón para ver lo que ve. Solo se consulta el servidor de quidam, y no guarda nada.</p>
+<button type="button" class="btn" id="run-connection" data-i18n="connection.run">VER LO QUE VEN LOS SITIOS</button>
+</div>
+
+<div class="result-card" id="conn-result" hidden>
+<p class="label" data-i18n="conn.sees">los sitios ven</p>
+<p class="result-lines" id="conn-lines"></p>
+<p class="result-note" id="conn-note" hidden></p>
+<dl class="result-details" id="conn-details">
+<div class="detail"><dt data-i18n="conn.ip">dirección ip</dt><dd class="detail-value" id="conn-ip"></dd><dd><button type="button" class="link-btn" id="reveal-ip" aria-pressed="false" data-i18n="conn.show">mostrar</button></dd></div>
+<div class="detail" id="conn-net-row"><dt data-i18n="conn.network">red</dt><dd class="detail-value" id="conn-net"></dd></div>
+<div class="detail"><dt data-i18n="conn.accuracy">precisión</dt><dd class="detail-value" data-i18n="conn.accuracy.value">la ciudad, no tu calle</dd></div>
+</dl>
+</div>
+
+<div class="question" id="conn-question" hidden>
+<h3 class="question-title" id="conn-q" data-i18n="conn.q">¿eres tú?</h3>
+<div class="choices" role="radiogroup" aria-labelledby="conn-q">
+<button type="button" class="choice" role="radio" aria-checked="false" tabindex="0" data-answer="yes"><span class="choice-dot" aria-hidden="true"></span><span class="choice-text" id="conn-opt-yes"></span></button>
+<button type="button" class="choice" role="radio" aria-checked="false" tabindex="-1" data-answer="vpn"><span class="choice-dot" aria-hidden="true"></span><span class="choice-text" data-i18n="conn.opt.vpn">no, es mi VPN, Tor o iCloud Private Relay</span></button>
+<button type="button" class="choice" role="radio" aria-checked="false" tabindex="-1" data-answer="unsure"><span class="choice-dot" aria-hidden="true"></span><span class="choice-text" data-i18n="conn.opt.unsure">no lo sé</span></button>
+</div>
+</div>
+
+<div class="outcome" id="conn-outcome" aria-live="polite"></div>
+
+<section class="vpn-check" id="vpn-check" aria-labelledby="vpn-title" hidden>
+<div class="recap">
+<div class="recap-text">
+<p class="label" data-i18n="conn.sees">los sitios ven</p>
+<p class="recap-line" id="vpn-recap"></p>
+</div>
+<span class="said" data-i18n="vpn.youSaid">dijiste: es mi VPN</span>
+</div>
+<div class="block-head">
+<h3 id="vpn-title" tabindex="-1"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="vpn.title">tu VPN, comprobada</span></h3>
+<p class="block-sub" data-i18n="vpn.sub">3 preguntas, respuestas automáticas</p>
+</div>
+<div class="vpn-intro">
+<p data-i18n="vpn.intro">Una buena VPN no deja rastro visible para un sitio, así que comprobamos lo que suele fallar.</p>
+<p class="vpn-summary" id="vpn-summary" aria-live="polite"></p>
+</div>
+<ul class="vpn-rows" id="vpn-rows"></ul>
+
+<div class="compare" id="vpn-compare" hidden>
+<h4 class="compare-title" data-i18n="vpn.cmp.title">doble comprobación: compara con la VPN apagada</h4>
+<ol class="compare-steps" id="vpn-steps"></ol>
+<div class="compare-run">
+<p data-i18n="vpn.cmp.reassure">Solo para esta petición, el servidor de quidam ve tu dirección real. No guarda nada.</p>
+<button type="button" class="btn" id="vpn-off" data-i18n="vpn.cmp.run">COMPARAR</button>
+</div>
+<div class="compare-result" id="vpn-off-result" aria-live="polite"></div>
+</div>
+</section>
+</section>
+
+<section class="block" id="localnet" aria-labelledby="localnet-title">
+<div class="block-head">
+<h2 id="localnet-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.localnet.title">tu red local</span></h2>
+<p class="block-sub" data-i18n="section.localnet.sub">necesita tu permiso</p>
+</div>
+<div class="action-box">
+<p data-i18n="localnet.intro">Puede que tu navegador pida permiso antes de que esta página llegue a los dispositivos de tu red doméstica, y decir que no es una respuesta válida: significa que la protección funciona. Un sitio web no puede ver direcciones MAC, nombres de dispositivos ni detalles del Wi-Fi. Solo una aplicación instalada puede.</p>
+<button type="button" class="btn" id="run-localnet" data-i18n="localnet.run">EXPLORAR MI RED</button>
+</div>
+<ul class="findings"></ul>
+</section>
+
+<section class="block" id="fix" aria-labelledby="fix-title">
+<div class="block-head">
+<h2 id="fix-title" tabindex="-1"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="fix.title">cómo solucionarlo</span></h2>
+<p class="block-sub" data-i18n="fix.sub">primero, lo que más protege</p>
+</div>
+<p class="hint" id="fix-empty" data-i18n="fix.empty">Primero lanza el análisis: las soluciones salen de lo que encuentre.</p>
+<div class="fix-plan" id="fix-plan" hidden>
+<p class="lead" id="fix-lead"></p>
+<p class="policy" data-i18n="fix.policy">Nombramos herramientas, nunca una sola marca: cada solución ofrece varias opciones, por orden alfabético. Nada está patrocinado y no hay enlaces de afiliado.</p>
+<div class="progress" id="fix-progress" role="group" aria-label="progreso" data-i18n-attr="aria-label:fix.progress.label">
+<p class="progress-count" id="fix-done"></p>
+<div class="progress-bar" aria-hidden="true"></div>
+<button type="button" class="btn btn-secondary" id="rescan" data-i18n="fix.rescan">VOLVER A COMPROBAR</button>
+<p class="rescan-result" id="rescan-result"></p>
+</div>
+<ol class="fix-list"></ol>
+<p class="hint" data-i18n="fix.ticks">Tus marcas se quedan en esta pestaña y desaparecen al cerrarla.</p>
+</div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+<div class="wrap footer-links">
+<p><span data-i18n="footer.cookies">sin cookies</span><span aria-hidden="true"> · </span><span data-i18n="footer.analytics">sin analítica</span><span aria-hidden="true"> · </span><span data-i18n="footer.source">código abierto</span></p>
+<a href="https://db-ip.com" data-i18n="footer.dbip">Datos IP de DB-IP</a>
+<a href="/es/legal/" data-i18n="footer.legal">aviso legal y privacidad</a>
+</div>
+</footer>
+
+<div id="announce" class="sr-only" aria-live="polite"></div>
+</body>
+</html>

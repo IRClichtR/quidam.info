@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>quidam : que dit votre appareil à chaque site web ?</title>
+<meta name="description" content="Voyez, en direct, ce que votre navigateur et votre connexion révèlent à chaque site web, puis une solution simple pour chaque problème. Tout se passe dans votre navigateur ; rien n'est conservé.">
+<link rel="alternate" hreflang="en" href="/en/">
+<link rel="alternate" hreflang="fr" href="/fr/">
+<link rel="alternate" hreflang="es" href="/es/">
+<link rel="alternate" hreflang="x-default" href="/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/site.css">
+<script type="module" src="/js/app.js"></script>
+</head>
+<body>
+<a class="skip" id="skip" href="#results" data-i18n="skip">Aller aux résultats</a>
+
+<header class="site-header">
+<div class="wrap">
+<div class="brand pixel">quidam<span class="brand-cursor" aria-hidden="true">_</span></div>
+<div class="header-end">
+<nav class="picker" aria-label="Langue" data-i18n-attr="aria-label:nav.language">
+<a href="/en/" hreflang="en" lang="en" data-i18n="lang.en">English</a><span class="picker-sep" aria-hidden="true"> · </span><a href="/fr/" hreflang="fr" lang="fr" aria-current="page" data-i18n="lang.fr">Français</a><span class="picker-sep" aria-hidden="true"> · </span><a href="/es/" hreflang="es" lang="es" data-i18n="lang.es">Español</a>
+</nav>
+<div class="stored">
+<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 2.5 3.8v4c0 3.3 2.3 5.6 5.5 6.7 3.2-1.1 5.5-3.4 5.5-6.7v-4Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+<span data-i18n="header.stored" data-n="0">0 octets stockés</span>
+</div>
+</div>
+</div>
+</header>
+
+<main class="wrap">
+
+<section class="hero" aria-labelledby="hero-title">
+<p class="hero-prompt" data-i18n="hero.prompt">$ quidam --scan --local-only</p>
+<h1 id="hero-title"><span data-i18n="hero.title">que dit votre appareil à chaque site web ?</span><span class="cursor" aria-hidden="true"></span></h1>
+<p class="lead" data-i18n="hero.lead">Les tests s'exécutent dans votre navigateur. Les résultats ne quittent jamais cet onglet, et rien n'est conservé quand vous le fermez.</p>
+</section>
+
+<section class="summary" id="results" tabindex="-1" aria-labelledby="results-title">
+<h2 class="label" id="results-title" data-i18n="results.title">résumé de l'analyse</h2>
+<div class="tiles"></div>
+<p class="hint" data-i18n="results.empty">Aucune analyse pour l'instant. Appuyez sur LANCER L'ANALYSE pour voir ce que ce navigateur laisse échapper.</p>
+</section>
+
+<section class="block" id="browser" aria-labelledby="browser-title">
+<div class="block-head">
+<h2 id="browser-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.browser.title">votre navigateur</span></h2>
+<p class="block-sub" data-i18n="section.browser.sub">lisible par toute page, sans demander la permission</p>
+</div>
+<div class="action-box">
+<p data-i18n="scan.intro">Le bouton lit ce que ce navigateur montre à chaque page que vous visitez. Rien ne quitte cet onglet.</p>
+<button type="button" class="btn" id="run-scan" data-i18n="scan.run">LANCER L'ANALYSE</button>
+</div>
+<ul class="findings"></ul>
+</section>
+
+<section class="block" id="connection" aria-labelledby="connection-title">
+<div class="block-head">
+<h2 id="connection-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.connection.title">ce que les sites voient de votre connexion</span></h2>
+<p class="block-sub" data-i18n="section.connection.sub">sur un clic · n'interroge que le serveur de quidam · ne garde rien</p>
+</div>
+<div class="action-box">
+<p data-i18n="connection.intro">Chaque site que vous visitez sait d'où vient votre connexion. Appuyez sur le bouton pour voir ce qu'il voit. Seul le serveur de quidam est interrogé, et il ne garde rien.</p>
+<button type="button" class="btn" id="run-connection" data-i18n="connection.run">VOIR CE QUE LES SITES VOIENT</button>
+</div>
+
+<div class="result-card" id="conn-result" hidden>
+<p class="label" data-i18n="conn.sees">les sites voient</p>
+<p class="result-lines" id="conn-lines"></p>
+<p class="result-note" id="conn-note" hidden></p>
+<dl class="result-details" id="conn-details">
+<div class="detail"><dt data-i18n="conn.ip">adresse ip</dt><dd class="detail-value" id="conn-ip"></dd><dd><button type="button" class="link-btn" id="reveal-ip" aria-pressed="false" data-i18n="conn.show">afficher</button></dd></div>
+<div class="detail" id="conn-net-row"><dt data-i18n="conn.network">réseau</dt><dd class="detail-value" id="conn-net"></dd></div>
+<div class="detail"><dt data-i18n="conn.accuracy">précision</dt><dd class="detail-value" data-i18n="conn.accuracy.value">la ville, pas votre rue</dd></div>
+</dl>
+</div>
+
+<div class="question" id="conn-question" hidden>
+<h3 class="question-title" id="conn-q" data-i18n="conn.q">c'est bien vous ?</h3>
+<div class="choices" role="radiogroup" aria-labelledby="conn-q">
+<button type="button" class="choice" role="radio" aria-checked="false" tabindex="0" data-answer="yes"><span class="choice-dot" aria-hidden="true"></span><span class="choice-text" id="conn-opt-yes"></span></button>
+<button type="button" class="choice" role="radio" aria-checked="false" tabindex="-1" data-answer="vpn"><span class="choice-dot" aria-hidden="true"></span><span class="choice-text" data-i18n="conn.opt.vpn">non, c'est mon VPN, Tor ou iCloud Private Relay</span></button>
+<button type="button" class="choice" role="radio" aria-checked="false" tabindex="-1" data-answer="unsure"><span class="choice-dot" aria-hidden="true"></span><span class="choice-text" data-i18n="conn.opt.unsure">je ne sais pas</span></button>
+</div>
+</div>
+
+<div class="outcome" id="conn-outcome" aria-live="polite"></div>
+
+<section class="vpn-check" id="vpn-check" aria-labelledby="vpn-title" hidden>
+<div class="recap">
+<div class="recap-text">
+<p class="label" data-i18n="conn.sees">les sites voient</p>
+<p class="recap-line" id="vpn-recap"></p>
+</div>
+<span class="said" data-i18n="vpn.youSaid">vous avez dit : c'est mon VPN</span>
+</div>
+<div class="block-head">
+<h3 id="vpn-title" tabindex="-1"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="vpn.title">votre VPN, vérifié</span></h3>
+<p class="block-sub" data-i18n="vpn.sub">3 questions, réponses automatiques</p>
+</div>
+<div class="vpn-intro">
+<p data-i18n="vpn.intro">Un bon VPN ne laisse aucune trace visible par un site : on vérifie donc ce qui coince d'habitude.</p>
+<p class="vpn-summary" id="vpn-summary" aria-live="polite"></p>
+</div>
+<ul class="vpn-rows" id="vpn-rows"></ul>
+
+<div class="compare" id="vpn-compare" hidden>
+<h4 class="compare-title" data-i18n="vpn.cmp.title">contre-vérification : comparez avec le VPN coupé</h4>
+<ol class="compare-steps" id="vpn-steps"></ol>
+<div class="compare-run">
+<p data-i18n="vpn.cmp.reassure">Pour cette seule requête, le serveur de quidam voit votre vraie adresse. Il ne garde rien.</p>
+<button type="button" class="btn" id="vpn-off" data-i18n="vpn.cmp.run">COMPARER</button>
+</div>
+<div class="compare-result" id="vpn-off-result" aria-live="polite"></div>
+</div>
+</section>
+</section>
+
+<section class="block" id="localnet" aria-labelledby="localnet-title">
+<div class="block-head">
+<h2 id="localnet-title"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="section.localnet.title">votre réseau local</span></h2>
+<p class="block-sub" data-i18n="section.localnet.sub">demande votre permission</p>
+</div>
+<div class="action-box">
+<p data-i18n="localnet.intro">Votre navigateur peut demander la permission avant que cette page atteigne les appareils de votre réseau domestique. Vous avez totalement le droit de refuser : cela veut dire que la protection fonctionne. Un site web ne peut voir ni les adresses MAC, ni les noms des appareils, ni les détails du Wi-Fi. Seule une application installée le peut.</p>
+<button type="button" class="btn" id="run-localnet" data-i18n="localnet.run">SONDER MON RÉSEAU</button>
+</div>
+<ul class="findings"></ul>
+</section>
+
+<section class="block" id="fix" aria-labelledby="fix-title">
+<div class="block-head">
+<h2 id="fix-title" tabindex="-1"><span class="prompt" aria-hidden="true">&gt; </span><span data-i18n="fix.title">comment y remédier</span></h2>
+<p class="block-sub" data-i18n="fix.sub">les plus efficaces d'abord</p>
+</div>
+<p class="hint" id="fix-empty" data-i18n="fix.empty">Lancez d'abord l'analyse : les solutions découlent de ce qu'elle trouve.</p>
+<div class="fix-plan" id="fix-plan" hidden>
+<p class="lead" id="fix-lead"></p>
+<p class="policy" data-i18n="fix.policy">Nous nommons des outils, jamais une seule marque : chaque solution propose plusieurs choix, par ordre alphabétique. Rien n'est sponsorisé et il n'y a aucun lien affilié.</p>
+<div class="progress" id="fix-progress" role="group" aria-label="progression" data-i18n-attr="aria-label:fix.progress.label">
+<p class="progress-count" id="fix-done"></p>
+<div class="progress-bar" aria-hidden="true"></div>
+<button type="button" class="btn btn-secondary" id="rescan" data-i18n="fix.rescan">RELANCER POUR VÉRIFIER</button>
+<p class="rescan-result" id="rescan-result"></p>
+</div>
+<ol class="fix-list"></ol>
+<p class="hint" data-i18n="fix.ticks">Vos coches restent dans cet onglet et disparaissent quand vous le fermez.</p>
+</div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+<div class="wrap footer-links">
+<p><span data-i18n="footer.cookies">aucun cookie</span><span aria-hidden="true"> · </span><span data-i18n="footer.analytics">aucune mesure d'audience</span><span aria-hidden="true"> · </span><span data-i18n="footer.source">code source ouvert</span></p>
+<a href="https://db-ip.com" data-i18n="footer.dbip">Données IP par DB-IP</a>
+<a href="/fr/legal/" data-i18n="footer.legal">mentions légales et confidentialité</a>
+</div>
+</footer>
+
+<div id="announce" class="sr-only" aria-live="polite"></div>
+</body>
+</html>

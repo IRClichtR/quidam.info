@@ -1,0 +1,3 @@
+# quidam welcomes search engines. There is nothing private to hide here: no page holds visitor data.
+User-agent: *
+Allow: /

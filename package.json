@@ -1,0 +1,44 @@
+{
+  "name": "leak_checker",
+  "version": "1.0.0",
+  "description": "Privacy-check website: what your browser, connection and local network reveal to every site, with a fix plan",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "start": "node server/main.js",
+    "e2e": "playwright test",
+    "check": "tsc --noEmit",
+    "fonts": "node scripts/fetch-fonts.js",
+    "pages": "node scripts/sync-pages.js",
+    "legal": "node scripts/legal.js",
+    "preflight": "node scripts/preflight.js",
+    "loadtest": "node scripts/loadtest.js",
+    "deploy": "bash deploy/deploy.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IRClichtR/quidam.info.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "GPL-2.0-only",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/IRClichtR/quidam.info/issues"
+  },
+  "homepage": "https://github.com/IRClichtR/quidam.info#readme",
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "mmdb-lib": "^3.0.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

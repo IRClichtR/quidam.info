@@ -1,0 +1,53 @@
+# systemd unit: starts quidam at boot, restarts it if it stops, and locks it down.
+# deploy.sh installs it as /etc/systemd/system/quidam.service on the first deploy.
+[Unit]
+Description=quidam privacy-check website
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=quidam
+Group=quidam
+WorkingDirectory=/opt/quidam/current
+EnvironmentFile=/etc/quidam/quidam.env
+# 256 MB of JavaScript heap is plenty. The IP databases (about 140 MB) live outside that heap.
+ExecStart=/usr/bin/node --max-old-space-size=256 server/main.js
+Restart=always
+RestartSec=2
+
+# Resource limits: a runaway process is killed and restarted rather than starving the machine.
+# Normal use is 150-350 MB; the weekly database refresh briefly holds a second copy (~+300 MB).
+MemoryMax=900M
+LimitNOFILE=65536
+
+# The downloaded IP data lives in /var/lib/quidam (systemd creates it, owned by quidam).
+StateDirectory=quidam
+StateDirectoryMode=0750
+ReadWritePaths=/var/lib/quidam
+
+# Hardening: the process can read its code and write only its data folder.
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+UMask=0027
+# Not set on purpose: MemoryDenyWriteExecute (Node's JavaScript compiler needs it off).
+
+[Install]
+WantedBy=multi-user.target
