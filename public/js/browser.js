@@ -33,6 +33,9 @@ export const FONTS = [
 // Only these findings count towards uniqueness (not IP, WebRTC or GPC, which are about other things).
 /** The leaks that make up a fingerprint. */
 const SIGNALS = ['screen', 'timezone', 'languages', 'gpu', 'fonts', 'canvas', 'audio', 'cpu'];
+// Zones reported in place of the real one. Tor Browser has said Atlantic/Reykjavik instead of UTC
+// since 2024. A page can't tell it from someone living in Iceland; those few read OK too.
+const HIDDEN_ZONES = ['UTC', 'Etc/UTC', 'Atlantic/Reykjavik'];
 // Renderer names that many devices share, so they identify nobody.
 const GENERIC_GPU = ['Mozilla', 'WebKit WebGL', 'Generic Renderer'];
 
@@ -72,9 +75,9 @@ export function judgeBrowser(raw, t, lang = 'en') {
     },
     {
       id: 'timezone',
-      // Everyone in UTC looks alike, so UTC is the only OK. Any other zone narrows you to a region.
+      // A zone shared by everyone who hides theirs is OK; any other zone narrows you to a region.
       // (A zone that is unknown is judged later, in connection.js, where it is compared with the IP.)
-      verdict: verdict(raw.timeZone === 'UTC' || raw.timeZone === 'Etc/UTC'),
+      verdict: verdict(HIDDEN_ZONES.includes(raw.timeZone)),
       value: t('finding.timezone.value', { zone: raw.timeZone, offset: utcOffset(raw.offsetMin) }),
     },
     {

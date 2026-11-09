@@ -1,6 +1,6 @@
 // @ts-check
 import { describe, it, expect } from 'vitest';
-import { OPTIONS, optionsFor, detectBrowser, detectPlatform, BROWSERS, rescanText } from '../../public/js/fixes.js';
+import { OPTIONS, optionsFor, detectBrowser, detectPlatform, BROWSERS, rescanText, specificKey } from '../../public/js/fixes.js';
 import { PROBLEMS } from '../../public/js/problems.js';
 import { loadStrings, t } from '../../public/js/i18n.js';
 import en from '../../public/js/i18n/en.js';
@@ -16,6 +16,18 @@ const UA = {
   android: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36',
   opera: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 OPR/122.0.0.0',
 };
+
+describe('specificKey', () => {
+  const has = (/** @type {string[]} */ ...keys) => (/** @type {string} */ k) => keys.includes(k);
+
+  it('prefers the platform, because a browser on iPhone is not its desktop version', () => {
+    expect(specificKey('fix.gpc.steps', ['ios', 'firefox'], has('fix.gpc.steps.ios', 'fix.gpc.steps.firefox'))).toBe('fix.gpc.steps.ios');
+  });
+  it('falls back to the browser, then to the generic key', () => {
+    expect(specificKey('fix.gpc.steps', ['mac', 'firefox'], has('fix.gpc.steps.ios', 'fix.gpc.steps.firefox'))).toBe('fix.gpc.steps.firefox');
+    expect(specificKey('fix.gpc.steps', ['windows', 'chrome'], has('fix.gpc.steps.ios', 'fix.gpc.steps.firefox'))).toBe('fix.gpc.steps');
+  });
+});
 
 describe('product policy', () => {
   // The design asks for 2 to 4 options, but its own browser table gives 5 on Windows and 6 on macOS.

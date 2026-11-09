@@ -13,8 +13,8 @@ import {
   providerName, placeName, maskIp, vpnChecks, judgeWebrtcLocal,
 } from './connection.js';
 import { probeRouters, permissionState, probeTimeout, judgeLocalnet } from './localnet.js';
-import { detectBrowser, detectPlatform, buildProblemCard, rescanText } from './fixes.js';
-import { groupProblems } from './problems.js';
+import { detectBrowser, detectPlatform, buildProblemCard, buildResolvedCard, rescanText } from './fixes.js';
+import { groupProblems, afterRescan } from './problems.js';
 
 const root = document.documentElement;
 const lang = root.lang;
@@ -399,7 +399,12 @@ const progressBar = /** @type {HTMLElement} */ (document.querySelector('#fix .pr
 const rescanBtn = /** @type {HTMLButtonElement} */ (byId('rescan'));
 const rescanResult = byId('rescan-result');
 /** Problems ticked as done, and cards opened or closed by the visitor. In memory only. */
-const done = new Set();
+let done = new Set();
+/** Ticked problems the last rescan still found, and problems it no longer finds. */
+let stale = new Set();
+let resolved = new Set();
+/** The rescan result to show on the card whose button started it. @type {{id: string, text: string}|null} */
+let checked = null;
 /** @type {Map<string, boolean>} */
 const opened = new Map();
 const ctx = {
@@ -409,6 +414,7 @@ const ctx = {
   /** @param {string} id @param {boolean} on */
   onDone: (id, on) => {
     if (on) done.add(id); else done.delete(id);
+    stale.delete(id);
     drawFixes();
     // The control that was pressed is gone: move focus to its counterpart on the redrawn card.
     const card = document.getElementById(`fix-${id}`);
@@ -416,6 +422,8 @@ const ctx = {
   },
   /** @param {string} id @param {boolean} open */
   onOpen: (id, open) => { opened.set(id, open); },
+  /** @param {string} id */
+  onCheck: (id) => { rescan(id); },
 };
 
 /** The lead sentence, the progress row and one card per problem. Ticks never change the counts; a rescan does. */
@@ -434,25 +442,37 @@ function drawFixes() {
   const d = problems.filter((p) => done.has(p.id)).length;
   byId('fix-done').textContent = tPlural('fix.progress', problems.length, { d: num.format(d) });
   progressBar.replaceChildren(...problems.map((p) => el('span', done.has(p.id) ? 'bar-cell is-done' : 'bar-cell')));
-  fixList.replaceChildren(...problems.map((p, index) => {
-    const card = buildProblemCard(p, { index, total: problems.length, done: done.has(p.id), open: opened.get(p.id) ?? index === 0 }, ctx);
+  const cards = problems.map((p, index) => {
+    const checkResult = checked?.id === p.id ? checked.text : null;
+    const card = buildProblemCard(p, { index, total: problems.length, done: done.has(p.id), open: opened.get(p.id) ?? index === 0, stale: stale.has(p.id), checkResult }, ctx);
     card.id = `fix-${p.id}`;
     return card;
-  }));
+  });
+  const lines = [...resolved].filter((id) => !problems.some((p) => p.id === id)).map((id) => {
+    const line = buildResolvedCard(id, t);
+    line.id = `fix-${id}`;
+    return line;
+  });
+  fixList.replaceChildren(...cards, ...lines);
 }
 
 /** Leaks across every section's current findings. */
 const leaking = () => allFindings().filter((f) => f.verdict === 'leak').length;
 
 let rescanning = false;
-/** Rerun the browser scan, plus the click-gated checks the visitor already ran here, then compare leak counts. */
-rescanBtn.addEventListener('click', async () => {
+/**
+ * Rerun the browser scan, plus the click-gated checks the visitor already ran here, then compare leak counts.
+ * @param {string} [from] the problem whose card started it: the result shows there and the focus stays there
+ */
+async function rescan(from) {
   if (rescanning) return;
   rescanning = true;
   rescanBtn.setAttribute('aria-disabled', 'true');
   rescanResult.textContent = '';
-  // The 'before' count is taken now, before the rescan replaces the findings.
+  checked = null;
+  // The 'before' values are taken now, before the rescan replaces the findings.
   const before = state.browser.length ? leaking() : null;
+  const problemsBefore = groupProblems(allFindings()).map((p) => p.id);
   try {
     announce(t('fix.rescan.running'));
     await runScan();
@@ -462,9 +482,17 @@ rescanBtn.addEventListener('click', async () => {
     const num = new Intl.NumberFormat(lang);
     const text = rescanText(t, before === null ? null : num.format(before), num.format(leaking()));
     rescanResult.textContent = text;
+    ({ done, stale, resolved } = afterRescan(problemsBefore, groupProblems(allFindings()), done, resolved));
+    if (from) checked = { id: from, text };
+    drawFixes();
+    if (from) {
+      const card = document.getElementById(`fix-${from}`);
+      /** @type {HTMLElement|null|undefined} */ (resolved.has(from) ? card : card?.querySelector('[data-action="check"]'))?.focus();
+    }
     announce(text);
   } finally {
     rescanning = false;
     rescanBtn.removeAttribute('aria-disabled');
   }
-});
+}
+rescanBtn.addEventListener('click', () => { rescan(); });
