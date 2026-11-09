@@ -522,6 +522,8 @@ a.btn { text-decoration: none; }
 .meter-cell.is-on { background: var(--safe); border-color: var(--safe); }
 .further { color: var(--soft); font-size: 0.9375rem; }
 .further strong { color: var(--fg); }
+.card-warning { padding-left: 0.75rem; border-left: 4px solid var(--red); font-weight: 700; }
+.card-check-result { font-weight: 700; }
 .card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem; padding-top: 0.25rem; }
 .done-check { display: inline-flex; align-items: center; gap: 0.625rem; min-height: 44px; cursor: pointer; }
 .done-check input { flex: none; width: 1.375rem; height: 1.375rem; margin: 0; accent-color: var(--safe); }

@@ -54,6 +54,9 @@ describe('judgeBrowser', () => {
     expect(v(judge({ timeZone: 'Europe/Paris', offsetMin: 120 }), 'timezone')).toBe('leak');
     expect(v(judge({ timeZone: 'Europe/London', offsetMin: 0 }), 'timezone')).toBe('leak');
   });
+  it('timezone OK for the zone Tor Browser reports to everyone', () => {
+    expect(v(judge({ timeZone: 'Atlantic/Reykjavik', offsetMin: 0 }), 'timezone')).toBe('ok');
+  });
   it('languages OK only with exactly one language, en or en-US', () => {
     expect(v(judge({ languages: ['en'] }), 'languages')).toBe('ok');
     expect(v(judge({ languages: ['en-US'] }), 'languages')).toBe('ok');

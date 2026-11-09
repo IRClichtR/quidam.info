@@ -116,13 +116,12 @@ export function optionsFor(id, platform, browser) {
 const MEASURED = /** @type {ProblemId[]} */ (['where', 'home', 'gpc', 'webrtc']);
 
 /**
- * Steps for the detected browser when the language file has them, else the generic ones.
- * @param {ProblemId} id @param {BrowserName} browser
- * @param {(key: string) => boolean} has @param {(key: string) => string[]} tList
+ * `key` narrowed to the first of `specifics` the language file has a variant for, else `key`.
+ * @param {string} key @param {string[]} specifics most specific first
+ * @param {(key: string) => boolean} has
  */
-function stepsFor(id, browser, has, tList) {
-  const specific = `fix.${id}.steps.${browser}`;
-  return tList(has(specific) ? specific : `fix.${id}.steps`);
+export function specificKey(key, specifics, has) {
+  return specifics.map((s) => `${key}.${s}`).find((k) => has(k)) ?? key;
 }
 
 /** @param {'leak'|'ok'} kind @param {string} text */
@@ -137,6 +136,7 @@ function tagEl(kind, text) {
  *   t: T, tList: (key: string) => string[], tPlural: (key: string, n: number, vars?: Record<string, string|number|undefined>) => string,
  *   has: (key: string) => boolean, lang: string, browser: BrowserName, platform: Platform,
  *   onDone: (id: ProblemId, done: boolean) => void, onOpen: (id: ProblemId, open: boolean) => void,
+ *   onCheck: (id: ProblemId) => void,
  * }} CardContext
  */
 
@@ -147,11 +147,11 @@ let seq = 0;
  * One card: the problem on the left, its basic fix on the right, the steps in a panel below.
  * A done card collapses to one line with an undo button.
  * @param {Problem} problem
- * @param {{index: number, total: number, done: boolean, open: boolean}} where
+ * @param {{index: number, total: number, done: boolean, open: boolean, stale: boolean, checkResult: string|null}} where
  * @param {CardContext} ctx
  * @returns {HTMLLIElement}
  */
-export function buildProblemCard(problem, { index, total, done, open }, ctx) {
+export function buildProblemCard(problem, { index, total, done, open, stale, checkResult }, ctx) {
   const { t, tPlural, lang, browser, platform } = ctx;
   const { id } = problem;
   const n = ++seq;
@@ -202,21 +202,25 @@ export function buildProblemCard(problem, { index, total, done, open }, ctx) {
   // ----- right: the basic fix -----
   const right = el('div', 'card-fix');
   const rightTags = el('div', 'tag-row');
-  rightTags.append(tagEl('ok', t('fix.basicFix')), el('span', 'card-effort', t(`fix.${id}.effort`)));
+  rightTags.append(tagEl('ok', t('fix.basicFix')), el('span', 'card-effort', t(specificKey(`fix.${id}.effort`, [platform], ctx.has))));
   const h4 = el('h4', 'fix-name', fixName);
   h4.id = `fix-name-${n}`;
-  right.append(rightTags, h4, el('p', 'fix-desc', t(`fix.${id}.fixDesc`)));
-
   const { shown, hidden, where } = optionsFor(id, platform, browser);
+  // The fix names products, but none of them exists here: the card must not promise what they do.
+  const noOptions = !shown.length && hidden.length > 0;
+  right.append(rightTags, h4, el('p', 'fix-desc', t(noOptions ? `fix.${id}.fixDesc.noOptions` : `fix.${id}.fixDesc`)));
+
   if (shown.length || hidden.length) {
     const box = el('div', 'options');
-    const list = el('ul', 'option-list');
-    list.append(...shown.map((o) => {
-      const row = el('li');
-      row.append(el('strong', 'option-name', o.name), el('span', 'option-note', t(`fix.opt.${o.note}`)));
-      return row;
-    }));
-    box.append(el('p', 'label', t('fix.pickOne')), list);
+    if (shown.length) {
+      const list = el('ul', 'option-list');
+      list.append(...shown.map((o) => {
+        const row = el('li');
+        row.append(el('strong', 'option-name', o.name), el('span', 'option-note', t(`fix.opt.${o.note}`)));
+        return row;
+      }));
+      box.append(el('p', 'label', t('fix.pickOne')), list);
+    }
     /** @type {string[]} */
     const notes = [];
     if (hidden.length) {
@@ -228,7 +232,7 @@ export function buildProblemCard(problem, { index, total, done, open }, ctx) {
     right.append(box);
   }
 
-  if (MEASURED.includes(id) && problem.closed !== null) {
+  if (MEASURED.includes(id) && problem.closed !== null && !noOptions) {
     const cover = el('div', 'coverage');
     const meter = el('span', 'meter');
     meter.setAttribute('aria-hidden', 'true');
@@ -251,7 +255,9 @@ export function buildProblemCard(problem, { index, total, done, open }, ctx) {
   const stepsCol = el('div', 'panel-col');
   const steps = el('ol', 'fix-steps');
   const browserName = t(`fix.browser.${browser}`);
-  steps.append(...stepsFor(id, browser, ctx.has, ctx.tList).map((s) => el('li', undefined, s.replace('{browser}', browserName))));
+  // The platform comes first: Firefox on iPhone doesn't have the settings of Firefox on a computer.
+  const stepsKey = specificKey(`fix.${id}.steps`, [platform, browser], ctx.has);
+  steps.append(...ctx.tList(stepsKey).map((s) => el('li', undefined, s.replace('{browser}', browserName))));
   stepsCol.append(el('p', 'label', t('fix.steps')), steps);
   const sideCol = el('div', 'panel-col');
   sideCol.append(el('p', 'label', t('fix.tradeoff')), el('p', undefined, t(`fix.${id}.trade`)));
@@ -279,14 +285,45 @@ export function buildProblemCard(problem, { index, total, done, open }, ctx) {
   box.setAttribute('aria-describedby', h4.id);
   box.addEventListener('change', () => ctx.onDone(id, box.checked));
   check.append(box, el('span', undefined, t('fix.done')));
-  actions.append(how, check);
+  // The plan's own rescan button is screens away on a phone, so each card has one.
+  const again = /** @type {HTMLButtonElement} */ (el('button', 'btn btn-secondary btn-small', t('fix.check')));
+  again.type = 'button';
+  again.dataset.action = 'check';
+  again.setAttribute('aria-describedby', h4.id);
+  again.addEventListener('click', () => ctx.onCheck(id));
+  actions.append(how, again, check);
   right.append(actions);
+  if (checkResult !== null) right.append(el('p', 'card-check-result', checkResult));
 
   const cols = el('div', 'card-cols');
   cols.append(left, arrow, right);
   const body = el('div', 'card-body');
-  body.append(head, cols, panel);
+  body.append(head);
+  if (stale) body.append(el('p', 'card-warning', t('fix.stillLeaking')));
+  body.append(cols, panel);
   li.append(body);
+  return li;
+}
+
+/**
+ * The line left where a card was once a rescan no longer finds its leak. Without it the card
+ * would just vanish, and the page would jump. It can take the focus of the button that is gone.
+ * @param {ProblemId} id
+ * @param {T} t
+ * @returns {HTMLLIElement}
+ */
+export function buildResolvedCard(id, t) {
+  const li = /** @type {HTMLLIElement} */ (el('li', 'problem-card is-done'));
+  li.dataset.problem = id;
+  li.tabIndex = -1;
+  const row = el('div', 'card-done');
+  const text = el('span', 'card-done-text');
+  text.append(t(`fix.${id}.title`), ' ');
+  const arrow = el('span', undefined, '→');
+  arrow.setAttribute('aria-hidden', 'true');
+  text.append(arrow, ' ', el('strong', undefined, t('fix.resolved')));
+  row.append(tagEl('ok', t('fix.fixed')), text);
+  li.append(row);
   return li;
 }
 

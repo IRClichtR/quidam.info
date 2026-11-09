@@ -171,6 +171,98 @@ test('RESCAN TO CHECK shows before and after counts and reruns only the checks a
   await expect(page.locator('#conn-question [aria-checked="true"]')).toHaveAttribute('data-answer', 'yes');
 });
 
+const IOS = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko)';
+const IPHONE_UAS = {
+  safari: `${IOS} Version/18.6 Mobile/15E148 Safari/604.1`,
+  chrome: `${IOS} CriOS/141.0.7390.96 Mobile/15E148 Safari/604.1`,
+  firefox: `${IOS} FxiOS/144.0 Mobile/15E148 Safari/605.1.15`,
+};
+
+/** Browser scan on a page whose GPC signal the test controls through `window.__gpc`. @param {import('@playwright/test').Page} page */
+async function scanWithoutGpc(page) {
+  await stub(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, 'globalPrivacyControl', { configurable: true, get() { return /** @type {any} */ (window).__gpc; } });
+  });
+  await open(page);
+  await page.locator('#run-scan').click();
+  await expect(page.locator('#browser .findings > li')).toHaveCount(9, { timeout: 10_000 });
+}
+
+for (const [name, userAgent] of Object.entries(IPHONE_UAS)) {
+  test.describe(`GPC on iPhone in ${name}`, () => {
+    test.use({ userAgent, viewport: { width: 390, height: 664 } });
+    test('the card offers a step the visitor can do, and promises nothing it cannot keep', async ({ page }) => {
+      await scanWithoutGpc(page);
+      const card = page.locator('#fix [data-problem="gpc"]');
+      await card.locator('[data-action="how"]').click();
+      await expect(card.locator('.fix-steps')).toContainText('App Store');
+      await expect(card.locator('.fix-steps')).not.toContainText('extensions above');
+      await expect(card.locator('.fix-steps')).not.toContainText('Privacy & Security');
+      await expect(card.locator('.fix-desc')).not.toContainText('extension sends it:');
+      await expect(card.locator('.card-effort')).not.toHaveText('1 min');
+      await expect(card.locator('.option-list')).toHaveCount(0);
+      await expect(card.locator('.options .label')).toHaveCount(0);
+      await expect(card.locator('.meter')).toHaveCount(0);
+    });
+  });
+}
+
+const ANDROID_UAS = {
+  chrome: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36',
+  firefox: 'Mozilla/5.0 (Android 15; Mobile; rv:145.0) Gecko/145.0 Firefox/145.0',
+};
+
+for (const [name, userAgent] of Object.entries(ANDROID_UAS)) {
+  test.describe(`GPC on Android in ${name}`, () => {
+    test.use({ userAgent, viewport: { width: 412, height: 800 } });
+    test('the card offers a step the visitor can do, and promises nothing it cannot keep', async ({ page }) => {
+      await scanWithoutGpc(page);
+      const card = page.locator('#fix [data-problem="gpc"]');
+      await card.locator('[data-action="how"]').click();
+      await expect(card.locator('.fix-steps')).toContainText('Google Play');
+      await expect(card.locator('.fix-steps')).not.toContainText('extensions above');
+      await expect(card.locator('.fix-steps')).not.toContainText('Privacy & Security');
+      await expect(card.locator('.card-effort')).not.toHaveText('1 min');
+      await expect(card.locator('.option-list')).toHaveCount(0);
+    });
+  });
+}
+
+test.describe('checking a GPC fix on iPhone', () => {
+  test.use({ userAgent: IPHONE_UAS.chrome, viewport: { width: 390, height: 664 } });
+  const card = (/** @type {import('@playwright/test').Page} */ page) => page.locator('#fix [data-problem="gpc"]');
+
+  test('a card ticked done goes back to open with a warning when the rescan still sees the leak', async ({ page }) => {
+    await scanWithoutGpc(page);
+    await card(page).locator('[data-action="done"]').click();
+    await expect(card(page).locator('.tag-ok')).toHaveText('FIXED');
+    await page.locator('#rescan').click();
+    await expect(page.locator('#rescan-result')).toHaveText(/^leaking: \d+ → \d+$/);
+    await expect(card(page)).not.toHaveClass(/is-done/);
+    await expect(card(page).locator('[data-action="done"]')).not.toBeChecked();
+    await expect(card(page).locator('.card-warning')).toBeVisible();
+    await expect(page.locator('#fix-done')).toHaveText(/^0 \/ \d+ fixed$/);
+  });
+
+  test('the check button on the card reports on the card and keeps the focus there', async ({ page }) => {
+    await scanWithoutGpc(page);
+    await card(page).locator('[data-action="check"]').click();
+    await expect(card(page).locator('.card-check-result')).toHaveText(/^leaking: \d+ → \d+$/);
+    await expect(card(page).locator('[data-action="check"]')).toBeFocused();
+  });
+
+  test('a fix confirmed by the check stays on screen as resolved, and takes the focus', async ({ page }) => {
+    await scanWithoutGpc(page);
+    await page.evaluate(() => { /** @type {any} */ (window).__gpc = true; });
+    await card(page).locator('[data-action="check"]').click();
+    await expect(card(page).locator('.tag-ok')).toHaveText('FIXED');
+    await expect(card(page)).toContainText('confirmed');
+    await expect(card(page).locator('[data-action="how"]')).toHaveCount(0);
+    await expect(card(page)).toBeFocused();
+  });
+});
+
 for (const lang of ['en', 'fr', 'es']) {
   test(`/${lang}/ at 320px with every card open: no horizontal scroll, no clipped control, no word broken in a tile`, async ({ page }) => {
     await stub(page);

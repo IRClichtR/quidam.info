@@ -53,3 +53,23 @@ export function groupProblems(findings) {
   // Array.prototype.sort is stable, so equal counts keep the table order.
   return problems.sort((a, b) => b.leaks.length - a.leaks.length);
 }
+
+/**
+ * What a rescan means for the visitor's ticks. A tick is a claim the scan can check: when the fix
+ * should have closed a leak that is still there, the tick goes and the problem is `stale`.
+ * Problems that no longer leak are `resolved`, until the leak comes back.
+ * @param {ProblemId[]} before the problems found before the rescan
+ * @param {Problem[]} problems the problems found by the rescan
+ * @param {Set<ProblemId>} done
+ * @param {Set<ProblemId>} resolved
+ * @returns {{done: Set<ProblemId>, stale: Set<ProblemId>, resolved: Set<ProblemId>}}
+ */
+export function afterRescan(before, problems, done, resolved) {
+  const now = new Map(problems.map((p) => [p.id, p]));
+  const stale = new Set([...done].filter((id) => (now.get(id)?.closed ?? 0) > 0));
+  return {
+    done: new Set([...done].filter((id) => now.has(id) && !stale.has(id))),
+    stale,
+    resolved: new Set([...resolved, ...before].filter((id) => !now.has(id))),
+  };
+}
